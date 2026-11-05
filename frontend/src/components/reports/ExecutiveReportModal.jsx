@@ -1,0 +1,253 @@
+import {
+  X,
+  Printer,
+  Download,
+  ExternalLink,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+} from 'lucide-react';
+import { openExecutiveReportWindow } from '../../utils/reportGenerator.js';
+
+export default function ExecutiveReportModal({
+  open,
+  onClose,
+  url,
+  scanId,
+  issues = [],
+}) {
+  if (!open) return null;
+
+  const safeUrl = url || 'https://sample-page.design';
+  let safeHost = 'sample-page.design';
+  try {
+    safeHost = new URL(safeUrl.startsWith('http') ? safeUrl : `https://${safeUrl}`).host;
+  } catch {
+    safeHost = safeUrl;
+  }
+
+  const criticalCount = issues.filter((i) => i.severity === 'critical').length;
+  const seriousCount = issues.filter((i) => i.severity === 'serious').length;
+  const moderateCount = issues.filter((i) => i.severity === 'moderate').length;
+  const minorCount = issues.filter((i) => i.severity === 'minor').length;
+  const verifiedCount = issues.filter((i) => i.status === 'Verified').length;
+
+  let rawScore = 100 - (criticalCount * 18 + seriousCount * 10 + moderateCount * 4 + minorCount * 1);
+  const score = Math.max(0, Math.min(100, rawScore));
+
+  const handlePrint = () => {
+    openExecutiveReportWindow({ url, scanId, issues });
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="report-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h2
+                id="report-modal-title"
+                className="text-base font-extrabold text-zinc-900 dark:text-zinc-100"
+              >
+                Executive Accessibility Audit Report Preview
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Official WCAG 2.1 AA/AAA executive summary & technical remediation plan
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-orange-500 active:scale-95"
+            >
+              <Printer size={15} />
+              <span>Print / Save as PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable Report Content Preview */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-zinc-900 dark:text-zinc-100">
+          {/* Site & Score Banner */}
+          <div className="flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700 dark:bg-zinc-800/40">
+            <div className="flex items-center gap-4">
+              <div
+                className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl text-white shadow-sm ${
+                  score >= 85
+                    ? 'bg-emerald-600'
+                    : score >= 60
+                    ? 'bg-amber-600'
+                    : 'bg-red-600'
+                }`}
+              >
+                <span className="text-2xl font-extrabold leading-none">{score}</span>
+                <span className="text-[9px] font-bold opacity-80">/ 100</span>
+              </div>
+              <div>
+                <span className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">
+                  {safeHost}
+                </span>
+                <h3 className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {score >= 85
+                    ? 'High WCAG AA Compliance'
+                    : score >= 60
+                    ? 'Remediation Required'
+                    : 'Critical Accessibility Barriers Detected'}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Generated by AccessLens axe-core 4.x analysis engine
+                </p>
+              </div>
+            </div>
+
+            <div className="text-left sm:text-right text-xs text-zinc-500 dark:text-zinc-400">
+              <div>Run ID: <code className="font-mono">{scanId || 'demo-audit'}</code></div>
+              <div className="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                {verifiedCount} Fix(es) Verified
+              </div>
+            </div>
+          </div>
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-center dark:border-red-900/40 dark:bg-red-950/20">
+              <span className="text-2xl font-extrabold text-red-600 dark:text-red-400">
+                {criticalCount}
+              </span>
+              <span className="block text-[10px] font-bold uppercase text-red-700 dark:text-red-300">
+                Critical Barriers
+              </span>
+            </div>
+            <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 text-center dark:border-orange-900/40 dark:bg-orange-950/20">
+              <span className="text-2xl font-extrabold text-orange-600 dark:text-orange-400">
+                {seriousCount}
+              </span>
+              <span className="block text-[10px] font-bold uppercase text-orange-700 dark:text-orange-300">
+                Serious Issues
+              </span>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
+              <span className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">
+                {moderateCount}
+              </span>
+              <span className="block text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
+                Moderate Issues
+              </span>
+            </div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-center dark:border-blue-900/40 dark:bg-blue-950/20">
+              <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">
+                {minorCount}
+              </span>
+              <span className="block text-[10px] font-bold uppercase text-blue-700 dark:text-blue-300">
+                Minor Notices
+              </span>
+            </div>
+          </div>
+
+          {/* Issue Cards */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Detected Issues & Remediation Details ({issues.length})
+            </h4>
+
+            {issues.map((issue, idx) => (
+              <div
+                key={issue.id || idx}
+                className="rounded-xl border border-zinc-200 bg-white p-4 text-xs dark:border-zinc-800 dark:bg-zinc-950/40"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-2.5 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-zinc-400">#{idx + 1}</span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {issue.title}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[10px]">
+                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      {issue.rule}
+                    </span>
+                    <span className="text-zinc-400">WCAG {issue.wcag}</span>
+                  </div>
+                </div>
+
+                <p className="mt-2 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  {issue.explanation}
+                </p>
+
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 font-mono text-[11px]">
+                  {issue.snippet && (
+                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+                      <div className="text-[9px] font-bold uppercase text-zinc-400 mb-1">
+                        Current Element:
+                      </div>
+                      <code className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
+                        {issue.snippet}
+                      </code>
+                    </div>
+                  )}
+
+                  {issue.fix && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50/50 p-2.5 dark:border-orange-950 dark:bg-orange-950/20">
+                      <div className="text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 mb-1">
+                        Suggested Fix:
+                      </div>
+                      <code className="text-orange-900 dark:text-orange-300 whitespace-pre-wrap break-all">
+                        {issue.fix}
+                      </code>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Clicking print opens a formatted document ready for PDF export or paper printing.
+          </span>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-500 active:scale-95"
+            >
+              <Printer size={15} />
+              <span>Print / Save as PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

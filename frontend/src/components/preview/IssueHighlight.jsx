@@ -1,17 +1,27 @@
-
 import { useEffect } from 'react';
 
-export default function IssueHighlight({ frameRef, selector }) {
+export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
   useEffect(() => {
     const frame = frameRef?.current;
-
     if (!frame) return;
 
     let animationFrame;
 
     const highlight = () => {
-      let doc;
+      // 1. Send postMessage into the iframe so the injected overlay script triggers inspection & tooltip
+      if (selector) {
+        try {
+          frame.contentWindow?.postMessage(
+            { type: 'ACCESSLENS_INSPECT', selector },
+            '*'
+          );
+        } catch {
+          // Ignore postMessage failure
+        }
+      }
 
+      // 2. Direct DOM manipulation for same-origin iframe document
+      let doc;
       try {
         doc = frame.contentDocument;
       } catch {
@@ -21,7 +31,7 @@ export default function IssueHighlight({ frameRef, selector }) {
       if (!doc) return;
 
       doc.querySelectorAll('.broken').forEach((element) => {
-        element.classList.remove('broken');
+        element.classList.remove('broken', 'inspect-pulse');
       });
 
       doc.getElementById('accesslens-highlight-styles')?.remove();
@@ -30,36 +40,33 @@ export default function IssueHighlight({ frameRef, selector }) {
 
       try {
         const elements = doc.querySelectorAll(selector);
-
         if (!elements.length) return;
 
         const style = doc.createElement('style');
         style.id = 'accesslens-highlight-styles';
-
         style.textContent = `
           .broken {
-            outline: 3px solid #f97316 !important;
-            outline-offset: 5px !important;
-            border-radius: 5px !important;
+            outline: 4px solid #f97316 !important;
+            outline-offset: 4px !important;
+            border-radius: 6px !important;
             box-shadow:
-              0 0 0 8px rgba(249, 115, 22, 0.12),
-              0 5px 22px rgba(249, 115, 22, 0.16) !important;
-            transition:
-              outline-color 0.25s ease,
-              box-shadow 0.25s ease !important;
+              0 0 0 8px rgba(249, 115, 22, 0.2),
+              0 6px 24px rgba(249, 115, 22, 0.25) !important;
+            transition: outline-color 0.25s ease, box-shadow 0.25s ease !important;
           }
-
-          @media (prefers-reduced-motion: reduce) {
-            .broken {
-              transition: none !important;
-            }
+          @keyframes accesslens-inspect-glow {
+            0% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.8); }
+            50% { box-shadow: 0 0 0 16px rgba(249, 115, 22, 0); }
+            100% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.8); }
+          }
+          .broken.inspect-pulse {
+            animation: accesslens-inspect-glow 1.2s ease-in-out infinite !important;
           }
         `;
-
         doc.head?.appendChild(style);
 
         elements.forEach((element) => {
-          element.classList.add('broken');
+          element.classList.add('broken', 'inspect-pulse');
         });
 
         animationFrame = requestAnimationFrame(() => {
@@ -71,8 +78,14 @@ export default function IssueHighlight({ frameRef, selector }) {
             inline: 'nearest',
           });
         });
+
+        setTimeout(() => {
+          elements.forEach((element) => {
+            element.classList.remove('inspect-pulse');
+          });
+        }, 3500);
       } catch {
-        return;
+        // Ignore selector errors
       }
     };
 
@@ -85,17 +98,15 @@ export default function IssueHighlight({ frameRef, selector }) {
 
       try {
         const doc = frame.contentDocument;
-
         doc?.querySelectorAll('.broken').forEach((element) => {
-          element.classList.remove('broken');
+          element.classList.remove('broken', 'inspect-pulse');
         });
-
         doc?.getElementById('accesslens-highlight-styles')?.remove();
       } catch {
-        return;
+        // Ignore
       }
     };
-  }, [frameRef, selector]);
+  }, [frameRef, selector, inspectTrigger]);
 
   return null;
 }

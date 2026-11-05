@@ -500,3 +500,19 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Ensure all native select options have proper contrast in dark mode */
+select {
+  color-scheme: light dark;
+}
+
+select option {
+  background-color: #ffffff;
+  color: #18181b;
+}
+
+.dark select option,
+html.dark select option {
+  background-color: #27272a;
+  color: #f4f4f5;
+}

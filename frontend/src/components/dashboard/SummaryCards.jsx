@@ -8,7 +8,10 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export default function SummaryCards({ issues = [] }) {
+export default function SummaryCards({ issues = [], scanState = 'idle', scoreFromScan }) {
+  const isCompleted = scanState === 'completed';
+  const hasIssues = issues.length > 0;
+
   const total = issues
     .filter((i) => i.status !== 'Ignored')
     .reduce((n, i) => n + (Number(i.count) || 0), 0);
@@ -21,64 +24,69 @@ export default function SummaryCards({ issues = [] }) {
     .filter((i) => i.status === 'Verified')
     .reduce((n, i) => n + (Number(i.count) || 0), 0);
 
-  const score = issues.length
-    ? Math.max(
-        0,
-        100 -
-          issues.reduce(
-            (n, i) =>
-              n +
-              (Number(i.count) || 0) *
-                ({
-                  critical: 12,
-                  serious: 7,
-                  moderate: 4,
-                  minor: 2,
-                }[i.severity] || 0),
-            0
+  // If scan is completed and 0 issues, score is 100!
+  const score = isCompleted
+    ? (scoreFromScan ?? (hasIssues ? Math.max(0, 100 - issues.reduce((n, i) => n + (Number(i.count) || 0) * ({ critical: 12, serious: 7, moderate: 4, minor: 2 }[i.severity] || 0), 0)) : 100))
+    : (hasIssues
+        ? Math.max(
+            0,
+            100 -
+              issues.reduce(
+                (n, i) =>
+                  n +
+                  (Number(i.count) || 0) *
+                    ({
+                      critical: 12,
+                      serious: 7,
+                      moderate: 4,
+                      minor: 2,
+                    }[i.severity] || 0),
+                0
+              )
           )
-      )
-    : null;
+        : null);
 
   const cards = [
     {
       label: 'Accessibility Score',
-      value: score ?? '—',
+      value: score !== null ? score : '—',
       suffix: '/100',
       description:
         score === null
           ? 'Run an audit to calculate'
-          : 'Project estimate · automated checks only',
+          : (isCompleted && !hasIssues
+              ? 'Flawless score · 0 automated violations'
+              : 'Project estimate · automated checks only'),
       icon: Activity,
-      iconColor: 'text-blue-600',
-      iconBackground: 'bg-blue-50 dark:bg-blue-500/10',
+      iconColor: isCompleted && !hasIssues ? 'text-emerald-500' : 'text-blue-600',
+      iconBackground: isCompleted && !hasIssues ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-blue-50 dark:bg-blue-500/10',
       showProgress: true,
     },
     {
       label: 'Total Issues',
-      value: issues.length ? total : '—',
-      description: issues.length
-        ? 'Across all accessibility rules'
-        : 'Awaiting first scan',
+      value: isCompleted ? total : (hasIssues ? total : '—'),
+      description: isCompleted
+        ? (!hasIssues ? 'Zero accessibility barriers detected' : `${total} occurrences across ${issues.length} rules`)
+        : (hasIssues ? `${total} occurrences across ${issues.length} rules` : 'Awaiting first scan'),
       icon: AlertTriangle,
-      iconColor: 'text-orange-600',
-      iconBackground: 'bg-orange-50 dark:bg-orange-500/10',
+      iconColor: isCompleted && !hasIssues ? 'text-emerald-600' : 'text-orange-600',
+      iconBackground: isCompleted && !hasIssues ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-orange-50 dark:bg-orange-500/10',
     },
     {
       label: 'Critical Issues',
-      value: issues.length ? critical : '—',
-      description: issues.length
-        ? 'Require immediate attention'
-        : 'Awaiting first scan',
+      value: isCompleted ? critical : (hasIssues ? critical : '—'),
+      description: isCompleted
+        ? (!hasIssues ? 'All critical criteria satisfied' : (critical > 0 ? 'Require immediate attention' : 'None detected'))
+        : (hasIssues ? 'Require immediate attention' : 'Awaiting first scan'),
       icon: AlertTriangle,
-      iconColor: 'text-red-600',
-      iconBackground: 'bg-red-50 dark:bg-red-500/10',
+      iconColor: critical > 0 ? 'text-red-600' : (isCompleted && !hasIssues ? 'text-emerald-600' : 'text-zinc-400'),
+      iconBackground: critical > 0 ? 'bg-red-50 dark:bg-red-500/10' : (isCompleted && !hasIssues ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-zinc-50 dark:bg-zinc-800'),
     },
     {
       label: 'Verified Fixes',
-      value: issues.length ? verified : '—',
-      suffix: issues.length ? `/ ${total}` : '',
-      description: 'Verification requires an actual recheck',
+      value: isCompleted ? (!hasIssues ? '100%' : `${verified}`) : (hasIssues ? verified : '—'),
+      suffix: isCompleted && hasIssues ? `/ ${total}` : '',
+      description: isCompleted && !hasIssues ? 'All criteria clean' : 'Verification requires an actual recheck',
       icon: ShieldCheck,
       iconColor: 'text-emerald-600',
       iconBackground: 'bg-emerald-50 dark:bg-emerald-500/10',

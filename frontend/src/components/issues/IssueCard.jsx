@@ -1,4 +1,3 @@
-
 import { ChevronRight, AlertCircle, Layers3 } from 'lucide-react';
 import CodeFixPanel from './CodeFixPanel.jsx';
 
@@ -12,6 +11,8 @@ export default function IssueCard({
   onCopy,
   onIgnore,
   onAction,
+  onVerify,
+  onGenerateFix,
 }) {
   const isIgnored = issue.status === 'Ignored';
 
@@ -75,14 +76,30 @@ export default function IssueCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[12px] font-bold leading-relaxed tracking-[-0.1px] text-zinc-900 dark:text-zinc-100 sm:text-[13px]">
-            {issue.title}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-[12px] font-bold leading-relaxed tracking-[-0.1px] text-zinc-900 dark:text-zinc-100 sm:text-[13px]">
+              {issue.title}
+            </h3>
+            {issue.isElementView && (
+              <span className="shrink-0 rounded-md bg-orange-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-400">
+                Node {issue.nodeIndex}/{issue.totalNodes}
+              </span>
+            )}
+          </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400">
             <code className="max-w-[150px] truncate rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
               {issue.rule}
             </code>
+
+            {issue.isElementView && issue.selector && (
+              <>
+                <span className="h-[3px] w-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                <code className="max-w-[170px] truncate rounded-md bg-orange-50 px-1.5 py-0.5 font-mono text-[10px] text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
+                  {issue.selector}
+                </code>
+              </>
+            )}
 
             <span className="h-[3px] w-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600" />
 
@@ -100,10 +117,7 @@ export default function IssueCard({
 
         <span className="flex shrink-0 items-center gap-1 rounded-lg bg-zinc-100 px-2 py-1.5 text-[11px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
           <Layers3 size={12} className="text-zinc-400" />
-          {issue.count}
-          <span className="hidden text-[10px] font-normal text-zinc-500 lg:inline">
-            nodes
-          </span>
+          {issue.isElementView ? `Node ${issue.nodeIndex}` : `${issue.count} nodes`}
         </span>
 
         <ChevronRight
@@ -132,6 +146,8 @@ export default function IssueCard({
             onCopy={onCopy}
             onAction={onAction}
             onIgnore={onIgnore}
+            onVerify={onVerify}
+            onGenerateFix={onGenerateFix}
           />
         </div>
       )}

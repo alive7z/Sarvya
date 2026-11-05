@@ -1,5 +1,4 @@
-
-import { Check, MoreHorizontal, AlertTriangle, ListChecks } from 'lucide-react';
+import { Check, MoreHorizontal, AlertTriangle, ListChecks, ShieldCheck } from 'lucide-react';
 import IssueCard from './IssueCard.jsx';
 import IssueFilters from './IssueFilters.jsx';
 
@@ -20,6 +19,13 @@ export default function IssuePanel({
   onCopy,
   onIgnore,
   onAction,
+  onVerify,
+  onGenerateFix,
+  viewMode = 'rules',
+  onViewModeChange,
+  totalNodesCount = 0,
+  rulesCount = 0,
+  scanState = 'idle',
 }) {
   const severityCounts = [
     {
@@ -54,7 +60,7 @@ export default function IssuePanel({
           </div>
 
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[17px] font-extrabold tracking-[-0.5px] text-zinc-900 dark:text-zinc-100">
                 Detected issues
               </h2>
@@ -62,10 +68,42 @@ export default function IssuePanel({
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 px-2 font-mono text-[11px] font-bold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 {visibleIssues.length}
               </span>
+
+              {/* View Mode Toggle: By Rule vs All Issues */}
+              {totalNodesCount > 0 && (
+                <div className="ml-1 inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => onViewModeChange?.('rules')}
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition-all ${
+                      viewMode === 'rules'
+                        ? 'bg-white text-orange-600 shadow-2xs dark:bg-zinc-900 dark:text-orange-400'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                    }`}
+                    title="Group issues by rule (with node switcher inside)"
+                  >
+                    By Rule ({rulesCount || issues.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onViewModeChange?.('elements')}
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition-all ${
+                      viewMode === 'elements'
+                        ? 'bg-white text-orange-600 shadow-2xs dark:bg-zinc-900 dark:text-orange-400'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                    }`}
+                    title="View all individual failing elements (matches Total Issues count)"
+                  >
+                    All Issues ({totalNodesCount})
+                  </button>
+                </div>
+              )}
             </div>
 
-            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Review findings and suggested remediations
+            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {viewMode === 'elements'
+                ? `Showing all ${visibleIssues.length} affected DOM elements with individual fixes`
+                : `Grouped into ${visibleIssues.length} rules (${totalNodesCount} total affected elements)`}
             </p>
           </div>
         </div>
@@ -75,7 +113,11 @@ export default function IssuePanel({
           aria-label="Issue panel options"
           title="Issue panel options"
           onClick={() =>
-            onAction?.('Issue sorting uses severity by default.')
+            onAction?.(
+              viewMode === 'elements'
+                ? 'Viewing all individual failing DOM elements.'
+                : 'Viewing issues grouped by WCAG accessibility rule.'
+            )
           }
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-white"
         >
@@ -106,10 +148,12 @@ export default function IssuePanel({
                 selected={activeId === issue.id}
                 expanded={expanded === issue.id}
                 onSelect={() => onSelect(issue)}
-                onInspect={() => onSelect(issue, true)}
+                onInspect={(target) => onSelect(target || issue, true)}
                 onCopy={() => onCopy(issue.fix)}
                 onIgnore={() => onIgnore(issue)}
                 onAction={onAction}
+                onVerify={onVerify}
+                onGenerateFix={onGenerateFix}
               />
             ))}
           </div>
@@ -117,12 +161,16 @@ export default function IssuePanel({
           <div className="flex h-full min-h-[260px] flex-col items-center justify-center px-5 text-center">
             <div
               className={`flex h-16 w-16 items-center justify-center rounded-2xl border shadow-sm ${
-                issues.length
+                scanState === 'completed' && issues.length === 0
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900/40 dark:bg-emerald-500/10 dark:text-emerald-400'
+                  : issues.length
                   ? 'border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-900/40 dark:bg-amber-500/10 dark:text-amber-400'
                   : 'border-zinc-200 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
               }`}
             >
-              {issues.length ? (
+              {scanState === 'completed' && issues.length === 0 ? (
+                <ShieldCheck size={32} strokeWidth={2} />
+              ) : issues.length ? (
                 <Check size={28} strokeWidth={1.8} />
               ) : (
                 <ListChecks size={28} strokeWidth={1.6} />
@@ -130,16 +178,27 @@ export default function IssuePanel({
             </div>
 
             <h3 className="mt-5 text-[15px] font-bold tracking-tight text-zinc-800 dark:text-zinc-200">
-              {issues.length
+              {scanState === 'completed' && issues.length === 0
+                ? 'Flawless! 0 Accessibility Issues'
+                : issues.length
                 ? 'No matching issues'
                 : 'No scan results yet'}
             </h3>
 
-            <p className="mt-2 max-w-[270px] text-[12px] leading-6 text-zinc-500 dark:text-zinc-400">
-              {issues.length
+            <p className="mt-2 max-w-[290px] text-[12px] leading-6 text-zinc-500 dark:text-zinc-400">
+              {scanState === 'completed' && issues.length === 0
+                ? 'This webpage passed all automated WCAG 2.1 Level A & AA checks with zero detected barriers.'
+                : issues.length
                 ? 'No findings match your current filters. Try adjusting your search or filter options.'
                 : 'Run an accessibility audit to discover and review issues across your website.'}
             </p>
+
+            {scanState === 'completed' && issues.length === 0 && (
+              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <Check size={14} />
+                100/100 WCAG Compliance
+              </span>
+            )}
 
             {issues.length > 0 && (
               <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[10px] font-semibold text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
