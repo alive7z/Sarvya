@@ -107,13 +107,13 @@ export default function CodeFixPanel({
     {
       label: isVerified ? 'Verified Sandbox' : 'Verify in Sandbox',
       icon: ShieldCheck,
-      iconClass: isVerified ? 'text-emerald-500' : 'text-orange-500',
+      iconClass: isVerified ? 'text-emerald-500' : 'text-accent-500',
       onClick: handleVerify,
     },
   ];
 
   return (
-    <div className="space-y-5 border-t border-zinc-100 bg-white px-4 py-5 sm:px-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="space-y-4 border-t border-zinc-100 bg-white px-4 py-5 sm:px-5 dark:border-zinc-800 dark:bg-zinc-900">
       <div>
         <p className="text-[12px] leading-[1.85] text-zinc-600 dark:text-zinc-400">
           {issue.explanation}
@@ -122,17 +122,17 @@ export default function CodeFixPanel({
 
       {/* Multi-node element navigator if this rule affects multiple DOM elements */}
       {nodes.length > 1 && (
-        <div className="rounded-xl border border-orange-200/90 bg-orange-50/40 p-3.5 dark:border-orange-900/50 dark:bg-orange-950/20">
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-950/30">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-white shadow-xs">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent-500 text-white shadow-xs">
                 <Layers3 size={13} />
               </div>
               <div>
                 <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
-                  Affected Elements & Fixes
+                  Affected elements
                 </span>
-                <span className="ml-2 inline-flex items-center rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
+                <span className="ml-2 inline-flex items-center rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-bold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
                   {nodes.length} occurrences
                 </span>
               </div>
@@ -152,7 +152,7 @@ export default function CodeFixPanel({
                 <ChevronLeft size={13} />
                 Prev
               </button>
-              <span className="font-mono text-[11px] font-bold text-orange-600 dark:text-orange-400">
+              <span className="font-mono text-[11px] font-bold text-accent-600 dark:text-accent-400">
                 {safeIndex + 1} / {nodes.length}
               </span>
               <button
@@ -182,13 +182,13 @@ export default function CodeFixPanel({
                     setActiveNodeIndex(idx);
                     onInspect?.(node.selector || node);
                   }}
-                  className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-mono transition-all duration-150 ${
+                  className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-mono transition-colors duration-150 ${
                     isCurrent
-                      ? 'bg-orange-500 font-bold text-white shadow-xs'
-                      : 'border border-zinc-200 bg-white text-zinc-600 hover:border-orange-300 hover:bg-orange-50/70 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-orange-700 dark:hover:bg-zinc-700'
+                      ? 'bg-zinc-900 font-medium text-white dark:bg-zinc-200 dark:text-zinc-900'
+                      : 'border border-zinc-200 bg-white text-zinc-600 hover:border-accent-300 hover:bg-accent-50/70 hover:text-accent-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-accent-700 dark:hover:bg-zinc-700'
                   }`}
                 >
-                  <span className={isCurrent ? 'text-orange-200' : 'text-zinc-400'}>
+                  <span className="text-zinc-400">
                     #{idx + 1}
                   </span>
                   <span className="max-w-[140px] truncate">{node.selector}</span>
@@ -212,7 +212,7 @@ export default function CodeFixPanel({
           type="button"
           onClick={handleInspectCurrent}
           aria-label="Select affected element"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-[11px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-[11px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400"
         >
           <Eye size={14} />
           Inspect
@@ -223,7 +223,7 @@ export default function CodeFixPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileCode2 size={15} className="text-zinc-400 dark:text-zinc-500" />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.09em] text-zinc-500 dark:text-zinc-400">
+            <h3 className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
               Affected element HTML {nodes.length > 1 && `(Node ${safeIndex + 1} of ${nodes.length})`}
             </h3>
           </div>
@@ -252,11 +252,11 @@ export default function CodeFixPanel({
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-400">
               <Sparkles size={14} />
             </div>
 
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.09em] text-zinc-700 dark:text-zinc-300">
+            <h3 className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
               Suggested fix {nodes.length > 1 && `(Tailored for Node #${safeIndex + 1})`}
             </h3>
           </div>
@@ -267,7 +267,7 @@ export default function CodeFixPanel({
                 ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-500/10 dark:text-emerald-400'
                 : isIgnored
                 ? 'border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                : 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/50 dark:bg-orange-500/10 dark:text-orange-400'
+                : 'border-accent-200 bg-accent-50 text-accent-700 dark:border-accent-900/50 dark:bg-accent-500/10 dark:text-accent-400'
             }`}
           >
             {isVerified ? (
@@ -279,14 +279,14 @@ export default function CodeFixPanel({
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-orange-200/80 bg-orange-50/30 dark:border-orange-900/40 dark:bg-orange-950/10">
-          <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/70 px-3.5 py-2.5 dark:border-orange-900/30 dark:bg-orange-500/5">
-            <span className="flex items-center gap-2 font-mono text-[10px] font-medium text-orange-700 dark:text-orange-400">
-              <span className="h-2 w-2 rounded-full bg-orange-500" />
+        <div className="overflow-hidden rounded-xl border border-accent-200/80 bg-accent-50/30 dark:border-accent-900/40 dark:bg-accent-950/10">
+          <div className="flex items-center justify-between border-b border-accent-100 bg-accent-50/70 px-3.5 py-2.5 dark:border-accent-900/30 dark:bg-accent-500/5">
+            <span className="flex items-center gap-2 font-mono text-[10px] font-medium text-accent-700 dark:text-accent-400">
+              <span className="h-2 w-2 rounded-full bg-accent-500" />
               Proposed improvement
             </span>
 
-            <span className="rounded-md border border-orange-200 bg-white px-2 py-0.5 font-mono text-[9px] text-orange-600 dark:border-orange-900/50 dark:bg-zinc-900 dark:text-orange-400">
+            <span className="rounded-md border border-accent-200 bg-white px-2 py-0.5 font-mono text-[9px] text-accent-600 dark:border-accent-900/50 dark:bg-zinc-900 dark:text-accent-400">
               FIX
             </span>
           </div>
@@ -299,19 +299,19 @@ export default function CodeFixPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2">
         {actions.map(({ label, icon: Icon, iconClass, onClick }) => (
           <button
             key={label}
             type="button"
             onClick={onClick}
-            className="group inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[11px] font-semibold text-zinc-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md active:scale-[0.97] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400"
+            className="group inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[11px] font-semibold text-zinc-600 shadow-sm transition-all duration-200 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 hover:shadow-md active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400"
           >
             <Icon
               size={15}
               className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${iconClass || ''}`}
             />
-            <span className="whitespace-nowrap">{label}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -321,14 +321,15 @@ export default function CodeFixPanel({
         <button
           type="button"
           onClick={() => setShowScreenReader(!showScreenReader)}
-          className="flex w-full items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-left text-xs font-bold text-zinc-700 transition-all hover:border-orange-300 hover:bg-orange-50/50 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300 dark:hover:border-orange-800 dark:hover:bg-orange-950/20 dark:hover:text-orange-400"
+          aria-expanded={showScreenReader}
+          className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-left text-xs font-bold text-zinc-700 transition-all hover:border-accent-300 hover:bg-accent-50/50 hover:text-accent-700 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300 dark:hover:border-accent-800 dark:hover:bg-accent-950/20 dark:hover:text-accent-400"
         >
-          <span className="flex items-center gap-2">
-            <Volume2 size={16} className="text-orange-500" />
-            Listen to Screen Reader (NVDA / VoiceOver)
+          <span className="flex min-w-0 items-start gap-2">
+            <Volume2 size={16} className="shrink-0 text-accent-500" />
+            Screen reader simulator
           </span>
-          <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-            {showScreenReader ? 'Hide speech simulator ▲' : 'Open speech simulator ▼'}
+          <span className="text-[10px] font-semibold text-accent-600 dark:text-accent-400">
+            {showScreenReader ? 'Hide simulator' : 'Open simulator'}
           </span>
         </button>
 
@@ -349,7 +350,7 @@ export default function CodeFixPanel({
           onClick={onIgnore}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all duration-200 ${
             isIgnored
-              ? 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-500/10'
+              ? 'text-accent-600 hover:bg-accent-50 dark:text-accent-400 dark:hover:bg-accent-500/10'
               : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200'
           }`}
         >

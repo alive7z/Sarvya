@@ -1,3 +1,4 @@
+import PageHeader, { PageSections } from '../layout/PageHeader.jsx';
 
 import { useState } from 'react';
 import {
@@ -15,7 +16,7 @@ import {
 import { listRepositories } from '../../services/githubService.js';
 import PullRequestReview from './PullRequestReview.jsx';
 
-export default function GitHubIntegration() {
+export default function GitHubIntegration({ onNavigate }) {
   const [repositories, setRepositories] = useState([]);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
@@ -40,19 +41,8 @@ export default function GitHubIntegration() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[30px] font-extrabold tracking-[-1.2px] text-zinc-900 dark:text-zinc-100 sm:text-[36px]">
-            GitHub integration
-          </h1>
-
-          <p className="mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Connect your repository, review accessibility fixes, and prepare
-            pull requests.
-          </p>
-        </div>
-
+    <div className="page-stack">
+      <PageHeader title="GitHub integration" description="Choose a repository, review proposed fixes, and prepare approved pull requests." category="Integrations" icon={Github} onNavigate={onNavigate} actions={(
         <div
           className={`inline-flex w-fit items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-bold ${
             repositories.length
@@ -67,9 +57,12 @@ export default function GitHubIntegration() {
           />
           {repositories.length ? 'CONNECTED' : 'DISCONNECTED'}
         </div>
-      </section>
+      )} />
+      <PageSections items={[["github-connection", "Repository connection"], ["github-review", "Review changes"]]} />
+      <div className="page-detail-grid">
 
-      <section className="overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900">
+
+      <section id="github-connection" className="workspace-panel overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-col gap-5 border-b border-zinc-100 px-6 py-7 sm:flex-row sm:items-start sm:px-8 dark:border-zinc-800">
           <div className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-white shadow-[0_5px_16px_rgba(0,0,0,0.13)] dark:bg-zinc-800">
             <Github size={27} strokeWidth={1.8} />
@@ -90,7 +83,7 @@ export default function GitHubIntegration() {
               type="button"
               onClick={connect}
               disabled={loading}
-              className="group mt-5 inline-flex h-[44px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-orange-600 dark:hover:bg-orange-500"
+              className="group mt-5 inline-flex h-[44px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-orange-600 dark:hover:bg-orange-500"
             >
               <RefreshCw
                 size={16}
@@ -226,7 +219,7 @@ export default function GitHubIntegration() {
         </div>
       </section>
 
-      <div className="overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900">
+      <div id="github-review" className="workspace-panel overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-center gap-3 border-b border-zinc-100 px-6 py-5 sm:px-8 dark:border-zinc-800">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400">
             <GitPullRequest size={19} />
@@ -252,6 +245,7 @@ export default function GitHubIntegration() {
             onReject={() => {}}
           />
         </div>
+      </div>
       </div>
     </div>
   );

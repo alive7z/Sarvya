@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="340" viewBox="0 0 560 340">
+<rect width="560" height="340" rx="20" fill="#e9eef8"/>
+<rect x="52" y="35" width="456" height="270" rx="16" fill="#fbfcff"/>
+<text x="80" y="72" font-family="Arial,sans-serif" font-size="14" fill="#495e7e">Room to grow</text>
+<text x="80" y="108" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#243c61">A better everyday.</text>
+<path d="M86 256H474M86 214H474M86 172H474M86 130H474" stroke="#e5ebf5" stroke-width="1"/>
+<rect x="113" y="205" width="53" height="51" rx="6" fill="#bbceef"/>
+<rect x="206" y="180" width="53" height="76" rx="6" fill="#98b4e3"/>
+<rect x="299" y="155" width="53" height="101" rx="6" fill="#7499d4"/>
+<rect x="392" y="130" width="53" height="126" rx="6" fill="#4777c3"/>
+<g font-family="Arial,sans-serif" font-size="12" fill="#667996" text-anchor="middle"><text x="140" y="278">Q1</text><text x="233" y="278">Q2</text><text x="326" y="278">Q3</text><text x="419" y="278">Q4</text></g>
+</svg>

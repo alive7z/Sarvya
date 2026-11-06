@@ -1,9 +1,8 @@
-import { ChevronRight, AlertCircle, Layers3 } from 'lucide-react';
+import { ChevronRight, Layers3 } from 'lucide-react';
 import CodeFixPanel from './CodeFixPanel.jsx';
 
 export default function IssueCard({
   issue,
-  index,
   selected,
   expanded,
   onSelect,
@@ -47,99 +46,55 @@ export default function IssueCard({
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-xl border bg-white transition-all duration-300 ease-out dark:bg-zinc-900 ${
+      className={`group relative overflow-hidden rounded-2xl border bg-white transition-[background-color,border-color,box-shadow] duration-200 ease-out dark:bg-zinc-900 ${
         selected
-          ? 'border-orange-300 shadow-[0_0_0_1px_rgba(234,120,75,0.12),0_6px_22px_rgba(0,0,0,0.055)] dark:border-orange-700 dark:shadow-[0_0_0_1px_rgba(234,120,75,0.12),0_6px_22px_rgba(0,0,0,0.2)]'
-          : 'border-zinc-200 shadow-[0_2px_8px_rgba(0,0,0,0.025)] hover:border-zinc-300 hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+          ? 'border-accent-300 shadow-sm dark:border-accent-800'
+          : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700'
       } ${isIgnored ? 'opacity-65' : ''}`}
     >
       {selected && (
-        <span className="absolute bottom-0 left-0 top-0 w-[3px] bg-orange-500" />
+        <span className="absolute bottom-0 left-0 top-0 w-[3px] bg-accent-500" />
       )}
 
       <button
         type="button"
         onClick={onSelect}
         aria-expanded={expanded}
-        className={`flex w-full items-center gap-3 px-4 py-[17px] text-left transition-colors duration-200 sm:gap-3.5 sm:px-5 ${
-          selected
-            ? 'bg-orange-50/40 dark:bg-orange-500/5'
-            : 'hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40'
-        }`}
+        aria-controls={`issue-details-${issue.id}`}
+        className={`flex w-full items-start gap-3 p-4 text-left ${selected ? 'bg-accent-50/30 dark:bg-accent-500/5' : 'hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40'}`}
       >
-        <span
-          className={`h-2.5 w-2.5 shrink-0 rounded-full ${severity.dot} shadow-sm`}
-        />
-
-        <span className="hidden w-6 shrink-0 font-mono text-[11px] font-medium text-zinc-400 sm:inline">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-[12px] font-bold leading-relaxed tracking-[-0.1px] text-zinc-900 dark:text-zinc-100 sm:text-[13px]">
-              {issue.title}
-            </h3>
-            {issue.isElementView && (
-              <span className="shrink-0 rounded-md bg-orange-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-400">
-                Node {issue.nodeIndex}/{issue.totalNodes}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400">
-            <code className="max-w-[150px] truncate rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-              {issue.rule}
-            </code>
-
-            {issue.isElementView && issue.selector && (
-              <>
-                <span className="h-[3px] w-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                <code className="max-w-[170px] truncate rounded-md bg-orange-50 px-1.5 py-0.5 font-mono text-[10px] text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
-                  {issue.selector}
-                </code>
-              </>
-            )}
-
-            <span className="h-[3px] w-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600" />
-
-            <span className="whitespace-nowrap">
-              WCAG {issue.wcag}
+        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${severity.dot}`} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold leading-5 text-zinc-900 dark:text-zinc-100">
+            {issue.title}
+          </span>
+          <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+            <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 font-medium capitalize ${severity.badge}`}>
+              {issue.severity}
             </span>
-          </div>
-        </div>
-
-        <span
-          className={`hidden shrink-0 items-center rounded-lg border px-2.5 py-1.5 text-[10px] font-bold capitalize sm:inline-flex ${severity.badge}`}
-        >
-          {issue.severity}
+            <code className="break-all font-mono">{issue.rule}</code>
+            <span className="text-zinc-300 dark:text-zinc-600" aria-hidden="true">·</span>
+            <span>WCAG {issue.wcag}</span>
+            <span className="inline-flex items-center gap-1">
+              <Layers3 size={11} />
+              {issue.isElementView ? `Element ${issue.nodeIndex}/${issue.totalNodes}` : `${issue.count} affected`}
+            </span>
+          </span>
+          {issue.isElementView && issue.selector && (
+            <code className="mt-2 block truncate font-mono text-[10px] text-zinc-500 dark:text-zinc-400" title={issue.selector}>
+              {issue.selector}
+            </code>
+          )}
         </span>
-
-        <span className="flex shrink-0 items-center gap-1 rounded-lg bg-zinc-100 px-2 py-1.5 text-[11px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          <Layers3 size={12} className="text-zinc-400" />
-          {issue.isElementView ? `Node ${issue.nodeIndex}` : `${issue.count} nodes`}
-        </span>
-
         <ChevronRight
-          size={17}
-          className={`shrink-0 text-zinc-400 transition-transform duration-300 ${
-            expanded
-              ? 'rotate-90 text-orange-500'
-              : 'group-hover:translate-x-0.5'
-          }`}
+          size={16}
+          aria-hidden="true"
+          className={`mt-0.5 shrink-0 text-zinc-400 transition-transform duration-200 ${expanded ? 'rotate-90 text-accent-500' : ''}`}
         />
       </button>
 
-      <div className="border-t border-zinc-100 px-4 py-2 sm:hidden dark:border-zinc-800">
-        <span
-          className={`inline-flex items-center rounded-md border px-2 py-1 text-[9px] font-bold capitalize ${severity.badge}`}
-        >
-          {issue.severity}
-        </span>
-      </div>
-
       {expanded && (
-        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+        <div id={`issue-details-${issue.id}`} className="animate-in fade-in duration-200">
           <CodeFixPanel
             issue={issue}
             onInspect={onInspect}

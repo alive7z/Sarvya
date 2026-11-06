@@ -1,3 +1,5 @@
+import { demoIssues, demoHtml, DEMO_HOST } from '../data/demoAudit.js';
+import PageHeader, { PageSections } from '../components/layout/PageHeader.jsx';
 import { useEffect, useRef, useState } from 'react';
 import Topbar from '../components/layout/Topbar.jsx';
 import ScanForm from '../components/scan/ScanForm.jsx';
@@ -46,216 +48,21 @@ import {
   Printer,
 } from 'lucide-react';
 
-const demoIssues = [
-  {
-    id: 'image-alt',
-    title: 'Image missing alternative text',
-    rule: 'image-alt',
-    severity: 'critical',
-    wcag: '1.1.1',
-    count: 3,
-    selector: 'img.hero-art',
-    explanation:
-      'Images that convey information need a text alternative so screen reader users can understand their purpose.',
-    snippet: '<img class="hero-art" src="/hero.jpg">',
-    fix: '<img class="hero-art" src="/hero.jpg" alt="People collaborating around a table">',
-    status: 'Not tested',
-    nodes: [
-      {
-        id: 'image-alt-node-0',
-        index: 1,
-        selector: 'img.hero-art',
-        snippet: '<img class="hero-art" src="/hero.jpg">',
-        fix: '<img class="hero-art" src="/hero.jpg" alt="People collaborating around a table">',
-        summary: 'Element does not have an alt attribute',
-      },
-      {
-        id: 'image-alt-node-1',
-        index: 2,
-        selector: 'img.team-photo',
-        snippet: '<img class="team-photo" src="/team.jpg">',
-        fix: '<img class="team-photo" src="/team.jpg" alt="Engineering team discussing design system">',
-        summary: 'Element does not have an alt attribute',
-      },
-      {
-        id: 'image-alt-node-2',
-        index: 3,
-        selector: 'img.product-chart',
-        snippet: '<img class="product-chart" src="/analytics.png">',
-        fix: '<img class="product-chart" src="/analytics.png" alt="Bar chart showing quarterly performance gains">',
-        summary: 'Element does not have an alt attribute',
-      },
-    ],
-  },
-  {
-    id: 'contrast',
-    title: 'Text has insufficient contrast',
-    rule: 'color-contrast',
-    severity: 'serious',
-    wcag: '1.4.3',
-    count: 2,
-    selector: '.muted-copy',
-    explanation:
-      'This text does not have enough contrast against its background to remain readable for many people.',
-    snippet: '<p class="muted-copy">Make room for better work.</p>',
-    fix: '<p class="muted-copy" style="color: #4b5563;">Make room for better work.</p>\n/* Contrast increased to 4.8:1 */',
-    status: 'Not tested',
-    nodes: [
-      {
-        id: 'contrast-node-0',
-        index: 1,
-        selector: '.muted-copy',
-        snippet: '<p class="muted-copy">Make room for better work.</p>',
-        fix: '<p class="muted-copy" style="color: #4b5563;">Make room for better work.</p>\n/* Contrast increased to 4.8:1 */',
-        summary: 'Element has insufficient color contrast of 2.4:1 (expected at least 4.5:1)',
-      },
-      {
-        id: 'contrast-node-1',
-        index: 2,
-        selector: 'span.subtext',
-        snippet: '<span class="subtext">All rights reserved.</span>',
-        fix: '<span class="subtext" style="color: #374151;">All rights reserved.</span>\n/* Contrast increased to 7.1:1 */',
-        summary: 'Element has insufficient color contrast of 2.1:1 (expected at least 4.5:1)',
-      },
-    ],
-  },
-  {
-    id: 'button-name',
-    title: 'Button has no accessible name',
-    rule: 'button-name',
-    severity: 'serious',
-    wcag: '4.1.2',
-    count: 1,
-    selector: 'button.icon-only',
-    explanation: 'A button needs a programmatic name that describes its action.',
-    snippet: '<button class="icon-only"><svg>…</svg></button>',
-    fix: '<button class="icon-only" aria-label="Open your account"><svg>…</svg></button>',
-    status: 'Not tested',
-    nodes: [
-      {
-        id: 'button-name-node-0',
-        index: 1,
-        selector: 'button.icon-only',
-        snippet: '<button class="icon-only"><svg>…</svg></button>',
-        fix: '<button class="icon-only" aria-label="Open your account"><svg>…</svg></button>',
-        summary: 'Element does not have inner text or an aria-label',
-      },
-    ],
-  },
-  {
-    id: 'label',
-    title: 'Form field has no label',
-    rule: 'label',
-    severity: 'moderate',
-    wcag: '1.3.1',
-    count: 1,
-    selector: 'input#email',
-    explanation:
-      'Visible and programmatic labels help people identify what information belongs in a field.',
-    snippet: '<input id="email" type="email">',
-    fix: '<label for="email">Work email</label>\n<input id="email" type="email">',
-    status: 'Not tested',
-    nodes: [
-      {
-        id: 'label-node-0',
-        index: 1,
-        selector: 'input#email',
-        snippet: '<input id="email" type="email">',
-        fix: '<label for="email">Work email</label>\n<input id="email" type="email">',
-        summary: 'Form control does not have a label',
-      },
-    ],
-  },
-  {
-    id: 'lang',
-    title: 'Document language is missing',
-    rule: 'html-has-lang',
-    severity: 'moderate',
-    wcag: '3.1.1',
-    count: 1,
-    selector: 'html',
-    explanation:
-      'Set the page language so assistive technology can pronounce content correctly.',
-    snippet: '<html>',
-    fix: '<html lang="en">',
-    status: 'Not tested',
-    nodes: [
-      {
-        id: 'lang-node-0',
-        index: 1,
-        selector: 'html',
-        snippet: '<html>',
-        fix: '<html lang="en">',
-        summary: 'The <html> element does not have a lang attribute',
-      },
-    ],
-  },
-];
-
-const demoHtml = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-<style>
-*{box-sizing:border-box}
-body{margin:0;font:15px Inter,Arial,sans-serif;color:#171717;background:#fff}
-.nav{padding:18px 8%;border-bottom:1px solid #eee;display:flex;justify-content:space-between;font-weight:700}
-.nav span{color:#f27645}
-.hero{padding:70px 10%;background:#f7f6f3;min-height:290px}
-.hero h1{font-size:42px;letter-spacing:-2px;max-width:500px;margin:8px 0 16px}
-.hero-art{width:100%;height:170px;object-fit:cover;background:linear-gradient(120deg,#e8ae8a,#55443e);margin-top:22px}
-.muted-copy{color:#a6a6a6}
-.icon-only{width:38px;height:38px;border:0;background:#f3f3f3;border-radius:50%}
-.content{padding:34px 10%;display:flex;gap:30px}
-.content input{padding:12px;border:1px solid #ddd;border-radius:5px}
-.content button{background:#151515;color:white;border:0;border-radius:5px;padding:12px 20px}
-.badge{display:inline-block;background:#f5e9df;padding:6px 9px;border-radius:30px;font-size:11px}
-.broken{outline:3px solid #f27645!important;outline-offset:4px;box-shadow:0 0 0 7px #f2764520}
-small{color:#777}
-</style>
-</head>
-<body>
-<header class="nav">
-<div>FIELDNOTE <span>STUDIO</span></div>
-<button class="icon-only"><svg width="16" height="16"></svg></button>
-</header>
-<section class="hero">
-<div class="badge">A little more room to think</div>
-<h1>Make room for better work.</h1>
-<p class="muted-copy">Thoughtful tools for the way your team works together.</p>
-<button>Explore the collection</button>
-<img class="hero-art" src="" alt="">
-</section>
-<section class="content">
-<div>
-<h2>Ideas worth sharing</h2>
-<p>Good work starts with a thoughtful space.</p>
-</div>
-<form>
-<label for="email">Work email</label><br>
-<input id="email" placeholder="you@company.com">
-<button>Join us</button>
-</form>
-</section>
-</body>
-</html>`;
-
 const cardStyle =
-  'overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10';
+  'workspace-panel overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10';
 
 const primaryButton =
-  'inline-flex min-h-[44px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.98] dark:bg-orange-600 dark:hover:bg-orange-500';
+  'inline-flex min-h-[44px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.99] dark:bg-accent-600 dark:hover:bg-accent-500';
 
 const secondaryButton =
-  'inline-flex min-h-[43px] items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 text-[12px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400';
+  'inline-flex min-h-[43px] items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 text-[12px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 hover:shadow-md active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400';
 
 function Badge({ children, tone = 'neutral' }) {
   const tones = {
     neutral:
       'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
     orange:
-      'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/50 dark:bg-orange-500/10 dark:text-orange-400',
+      'border-accent-200 bg-accent-50 text-accent-700 dark:border-accent-900/50 dark:bg-accent-500/10 dark:text-accent-400',
     green:
       'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-500/10 dark:text-emerald-400',
   };
@@ -273,45 +80,10 @@ function Badge({ children, tone = 'neutral' }) {
 
 function safeHost(value) {
   try {
-    return value ? new URL(value).host : 'sample-page.design';
+    return value ? new URL(value).host : DEMO_HOST;
   } catch {
-    return 'sample-page.design';
+    return DEMO_HOST;
   }
-}
-
-function PageHeader({ title, description, icon: Icon, onNavigate }) {
-  return (
-    <section className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-4">
-        {Icon && (
-          <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600 shadow-sm dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400 sm:flex">
-            <Icon size={23} strokeWidth={1.8} />
-          </div>
-        )}
-
-        <div>
-          <h1 className="text-[30px] font-extrabold tracking-[-1.2px] text-zinc-900 dark:text-zinc-100 sm:text-[36px]">
-            {title}
-          </h1>
-
-          <p className="mt-2 max-w-[650px] text-[13px] leading-[1.8] text-zinc-500 dark:text-zinc-400">
-            {description}
-          </p>
-        </div>
-      </div>
-
-      {onNavigate && (
-        <button
-          type="button"
-          onClick={() => onNavigate('workspace')}
-          className={`${secondaryButton} shrink-0 self-start`}
-        >
-          <ArrowLeft size={16} />
-          Workspace
-        </button>
-      )}
-    </section>
-  );
 }
 
 export default function AuditDashboard() {
@@ -340,6 +112,10 @@ export default function AuditDashboard() {
   const [viewMode, setViewMode] = useState('rules');
 
   const iframe = useRef(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [page]);
 
   const { scan: scanResult, error: statusError } = useScanStatus(scanId);
 
@@ -717,7 +493,7 @@ export default function AuditDashboard() {
 
   return (
     <div
-      className={`app-shell theme-${theme} min-h-screen bg-[#f7f7f5] font-['DM_Sans'] text-zinc-900 transition-colors duration-300 dark:bg-[#131312] dark:text-zinc-100 ${
+      className={`app-shell theme-${theme} min-h-screen bg-[#f7f8fa] font-sans text-zinc-900 transition-colors duration-300 dark:bg-[#131312] dark:text-zinc-100 ${
         theme === 'dark' ? 'dark' : ''
       }`}
     >
@@ -732,21 +508,10 @@ export default function AuditDashboard() {
       {page === 'workspace' ? (
         <main
           id="workspace"
-          className="mx-auto max-w-[1510px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-10"
+          className="page-main"
         >
-          <section className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-[32px] font-extrabold leading-tight tracking-[-1.3px] text-zinc-900 dark:text-zinc-100 sm:text-[40px]">
-                Audit workspace
-              </h1>
-
-              <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 sm:text-[14px]">
-                Find accessibility barriers, inspect findings, and build better
-                web experiences.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+          <PageHeader title="Audit workspace" description="Find accessibility barriers, inspect findings, and review suggested fixes." category="Audit" actions={(
+            <div className="flex flex-wrap items-center gap-2">
               {demo ? (
                 <button
                   type="button"
@@ -780,7 +545,7 @@ export default function AuditDashboard() {
               )}
 
               <div className="inline-flex w-fit shrink-0 items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-[11px] font-semibold text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-                <Clock3 size={16} className="text-orange-500" />
+                <Clock3 size={16} className="text-accent-500" />
                 <span>
                   {scanState === 'completed' ? 'Just scanned' : 'Ready to scan'}
                 </span>
@@ -791,7 +556,7 @@ export default function AuditDashboard() {
                   type="button"
                   onClick={startScan}
                   disabled={['queued', 'processing', 'scanning'].includes(scanState)}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 text-[11px] font-bold text-orange-600 shadow-sm transition-all hover:bg-orange-100 active:scale-95 disabled:opacity-60 dark:border-orange-900/50 dark:bg-orange-500/10 dark:text-orange-400"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 text-[11px] font-bold text-accent-600 shadow-sm transition-all hover:bg-accent-100 active:scale-95 disabled:opacity-60 dark:border-accent-900/50 dark:bg-accent-500/10 dark:text-accent-400"
                 >
                   <RefreshCw
                     size={14}
@@ -801,9 +566,11 @@ export default function AuditDashboard() {
                 </button>
               )}
             </div>
-          </section>
+          )} />
+          <PageSections items={[["scan-setup", "Scan setup"], ["scan-summary", "Overview"], ["scan-findings", "Findings"], ["scan-next-steps", "Next steps"]]} />
 
-          <div className="mb-5">
+
+          <div id="scan-setup" className="mb-5">
             <ScanForm
               url={url}
               onUrlChange={setUrl}
@@ -816,9 +583,9 @@ export default function AuditDashboard() {
             />
           </div>
 
-          <SummaryCards issues={issues} scanState={scanState} scoreFromScan={scanResult?.score} />
+          <div id="scan-summary"><SummaryCards issues={issues} scanState={scanState} scoreFromScan={scanResult?.score} /></div>
 
-          <section className="mt-10">
+          <section id="scan-findings" className="mt-8">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-[20px] font-extrabold tracking-[-0.6px] text-zinc-900 dark:text-zinc-100 sm:text-[23px]">
@@ -843,7 +610,7 @@ export default function AuditDashboard() {
                       aria-pressed={mobileTab === id}
                       className={`rounded-lg px-4 py-2 text-[11px] font-bold transition-all duration-200 ${
                         mobileTab === id
-                          ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-700 dark:text-orange-400'
+                          ? 'bg-white text-accent-600 shadow-sm dark:bg-zinc-700 dark:text-accent-400'
                           : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
                       }`}
                     >
@@ -853,7 +620,7 @@ export default function AuditDashboard() {
                 </div>
 
                 <span className="hidden max-w-[250px] items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[11px] font-medium text-zinc-500 shadow-sm sm:inline-flex dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-                  <Globe2 size={14} className="shrink-0 text-orange-500" />
+                  <Globe2 size={14} className="shrink-0 text-accent-500" />
                   <span className="truncate">{safeHost(url)}</span>
                 </span>
               </div>
@@ -925,16 +692,16 @@ export default function AuditDashboard() {
             </div>
           </section>
 
-          <ReportActions
+          <div id="scan-next-steps"><ReportActions
             onExport={exportCsv}
             onCompare={() => setShowCompare(true)}
             onPullRequest={() => setPage('github')}
-          />
+          /></div>
 
           <footer className="mt-9 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-[11px] text-zinc-400 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:text-zinc-500">
             <span className="flex items-center gap-2 font-bold tracking-[0.04em]">
               ACCESSLENS
-              <span className="h-1 w-1 rounded-full bg-orange-500" />
+              <span className="h-1 w-1 rounded-full bg-accent-500" />
               BUILT FOR A MORE ACCESSIBLE WEB
             </span>
 
@@ -945,7 +712,7 @@ export default function AuditDashboard() {
           </footer>
         </main>
       ) : (
-        <main className="mx-auto max-w-[1510px] px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-10">
+        <main className="page-main">
           <AppPage
             page={page}
             theme={theme}
@@ -1056,7 +823,7 @@ function HistoryView({ onLoadScan, onToast }) {
   }, []);
 
   return (
-    <section className={cardStyle}>
+    <section id="scan-history" className={cardStyle}>
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-100 px-6 py-6 sm:px-8 dark:border-zinc-800">
         <div>
           <h2 className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1080,7 +847,7 @@ function HistoryView({ onLoadScan, onToast }) {
       <div className="p-6 sm:p-8">
         {loading ? (
           <div className="flex min-h-[220px] flex-col items-center justify-center">
-            <LoaderCircle size={28} className="animate-spin text-orange-500" />
+            <LoaderCircle size={28} className="animate-spin text-accent-500" />
             <p className="mt-3 text-[12px] text-zinc-400">Loading audit history…</p>
           </div>
         ) : scans.length > 0 ? (
@@ -1093,11 +860,11 @@ function HistoryView({ onLoadScan, onToast }) {
               return (
                 <div
                   key={scan.scanId}
-                  className="flex flex-col gap-4 py-4.5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <Globe2 size={16} className="shrink-0 text-orange-500" />
+                      <Globe2 size={16} className="shrink-0 text-accent-500" />
                       <span className="truncate font-mono text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
                         {scan.startUrl}
                       </span>
@@ -1134,7 +901,7 @@ function HistoryView({ onLoadScan, onToast }) {
                     <button
                       type="button"
                       onClick={() => onLoadScan(scan)}
-                      className="inline-flex min-h-[38px] items-center gap-2 rounded-xl bg-zinc-900 px-4 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-zinc-800 dark:bg-orange-600 dark:hover:bg-orange-500"
+                      className="inline-flex min-h-[38px] items-center gap-2 rounded-xl bg-zinc-900 px-4 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-zinc-800 dark:bg-accent-600 dark:hover:bg-accent-500"
                     >
                       Load into workspace
                     </button>
@@ -1212,29 +979,36 @@ function AppPage({
   }
 
   if (page === 'monitoring') {
-    return <MonitoringPanel />;
+    return <MonitoringPanel onNavigate={onNavigate} />;
   }
 
   if (page === 'github') {
-    return <GitHubIntegration />;
+    return <GitHubIntegration onNavigate={onNavigate} />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`page-stack page-${page}`}>
       <PageHeader
         title={title}
         description={descriptions[page]}
         icon={icons[page]}
         onNavigate={onNavigate}
+        category={page === 'docs' ? 'Resources' : page === 'settings' ? 'Preferences' : 'Manage'}
       />
+      <PageSections items={{
+        history: [['scan-history', 'Saved scans']],
+        reports: [['report-exports', 'Export results'], ['report-fields', 'Report contents']],
+        docs: [['quick-start', 'Getting started'], ['audit-workflow', 'Audit workflow'], ['developer-cli', 'Developer CLI'], ['api-reference', 'API reference']],
+        settings: [['appearance', 'Appearance'], ['api-connection', 'API connection'], ['scan-guidance', 'Scan guidance']],
+      }[page] || []} />
 
       {page === 'history' && (
         <HistoryView onLoadScan={onLoadScan} onToast={onToast} />
       )}
 
       {page === 'reports' && (
-        <>
-          <section className={cardStyle}>
+        <div className="page-detail-grid">
+          <section id="report-exports" className={cardStyle}>
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-100 px-6 py-6 sm:px-8 dark:border-zinc-800">
               <div>
                 <h2 className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1255,7 +1029,7 @@ function AppPage({
 
             <div className="p-6 sm:p-8 space-y-4">
               <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-zinc-50/60 p-5 sm:flex-row sm:items-center dark:border-zinc-700 dark:bg-zinc-800/40">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-accent-100 bg-accent-50 text-accent-600 dark:border-accent-900/40 dark:bg-accent-500/10 dark:text-accent-400">
                   <FileDown size={23} />
                 </div>
 
@@ -1281,7 +1055,7 @@ function AppPage({
               </div>
 
               <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-zinc-50/60 p-5 sm:flex-row sm:items-center dark:border-zinc-700 dark:bg-zinc-800/40">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-accent-100 bg-accent-50 text-accent-600 dark:border-accent-900/40 dark:bg-accent-500/10 dark:text-accent-400">
                   <Download size={23} />
                 </div>
 
@@ -1307,7 +1081,7 @@ function AppPage({
               </div>
 
               <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-zinc-50/60 p-5 sm:flex-row sm:items-center dark:border-zinc-700 dark:bg-zinc-800/40">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-accent-100 bg-accent-50 text-accent-600 dark:border-accent-900/40 dark:bg-accent-500/10 dark:text-accent-400">
                   <Printer size={23} />
                 </div>
 
@@ -1333,12 +1107,12 @@ function AppPage({
             </div>
           </section>
 
-          <section className={`${cardStyle} p-6 sm:p-8`}>
+          <section id="report-fields" className={`${cardStyle} p-6 sm:p-8`}>
             <h2 className="text-[17px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
               Included report fields
             </h2>
 
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4">
               {[
                 'Issue title and axe-core rule ID',
                 'Severity and affected node count',
@@ -1360,12 +1134,12 @@ function AppPage({
               ))}
             </div>
           </section>
-        </>
+        </div>
       )}
 
       {page === 'docs' && (
-        <>
-          <section className={`${cardStyle} p-7 sm:p-9`}>
+        <div className="page-docs-grid">
+          <section id="quick-start" className={`${cardStyle} p-7 sm:p-9`}>
             <Badge tone="orange">QUICK GUIDE</Badge>
 
             <h2 className="mt-6 text-[25px] font-extrabold tracking-[-0.8px] text-zinc-900 dark:text-zinc-100">
@@ -1388,7 +1162,7 @@ function AppPage({
             </button>
           </section>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div id="audit-workflow" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
                 number: '01',
@@ -1416,7 +1190,7 @@ function AppPage({
               },
             ].map(({ number, title, description }) => (
               <section key={number} className={`${cardStyle} p-6 sm:p-7`}>
-                <span className="font-mono text-[12px] font-bold text-orange-500">
+                <span className="font-mono text-[12px] font-bold text-accent-500">
                   {number}
                 </span>
 
@@ -1431,7 +1205,7 @@ function AppPage({
             ))}
           </div>
 
-          <section className={`${cardStyle} p-6 sm:p-8`}>
+          <section id="developer-cli" className={`${cardStyle} p-6 sm:p-8`}>
             <Badge tone="orange">DEVELOPER CLI & NPM</Badge>
             <h2 className="mt-3 text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
               AccessLens Command Line Interface (`accesslens`)
@@ -1454,7 +1228,7 @@ function AppPage({
             </div>
           </section>
 
-          <section className={`${cardStyle} p-6 sm:p-8`}>
+          <section id="api-reference" className={`${cardStyle} p-6 sm:p-8`}>
             <h2 className="text-[17px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
               Available API endpoints
             </h2>
@@ -1485,12 +1259,12 @@ function AppPage({
               ))}
             </div>
           </section>
-        </>
+        </div>
       )}
 
       {page === 'settings' && (
-        <>
-          <section className={cardStyle}>
+        <div className="page-settings-grid">
+          <section id="appearance" className={cardStyle}>
             <div className="border-b border-zinc-100 px-6 py-6 sm:px-8 dark:border-zinc-800">
               <h2 className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
                 Appearance
@@ -1524,7 +1298,7 @@ function AppPage({
                     aria-pressed={theme === value}
                     className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-[11px] font-bold transition-all duration-200 ${
                       theme === value
-                        ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-700 dark:text-orange-400'
+                        ? 'bg-white text-accent-600 shadow-sm dark:bg-zinc-700 dark:text-accent-400'
                         : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
                     }`}
                   >
@@ -1536,7 +1310,7 @@ function AppPage({
             </div>
           </section>
 
-          <section className={cardStyle}>
+          <section id="api-connection" className={cardStyle}>
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-100 px-6 py-6 sm:px-8 dark:border-zinc-800">
               <div>
                 <h2 className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1573,9 +1347,9 @@ function AppPage({
             </div>
           </section>
 
-          <section className={`${cardStyle} p-6 sm:p-8`}>
+          <section id="scan-guidance" className={`${cardStyle} p-6 sm:p-8`}>
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-400">
                 <AlertCircle size={19} />
               </div>
 
@@ -1592,7 +1366,7 @@ function AppPage({
               </div>
             </div>
           </section>
-        </>
+        </div>
       )}
     </div>
   );

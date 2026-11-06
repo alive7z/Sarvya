@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { DEMO_HOST } from '../../data/demoAudit.js';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import PreviewToolbar from './PreviewToolbar.jsx';
 import IssueHighlight from './IssueHighlight.jsx';
+import PreviewScreenReader from './PreviewScreenReader.jsx';
 import { Glasses, Info, X } from 'lucide-react';
 
 const VISION_DESCRIPTIONS = {
@@ -56,6 +58,9 @@ export default function WebsitePreview({
   const isMobile = viewport === 'mobile';
   const [frameFailed, setFrameFailed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [readerOpen, setReaderOpen] = useState(false);
+  const readerButtonRef = useRef(null);
+  const closeReader = () => { setReaderOpen(false); readerButtonRef.current?.focus(); };
 
   // Build preview URL: use relative path so Vite proxy proxies it to backend
   // Include scanId so the backend injects the interactive red error markers & tooltips!
@@ -118,7 +123,7 @@ export default function WebsitePreview({
 
   return (
     <section
-      className={`flex h-[650px] min-w-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_5px_25px_rgba(0,0,0,0.18)] sm:h-[680px] ${className}`}
+      className={`workspace-panel flex h-[650px] min-w-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_5px_25px_rgba(0,0,0,0.18)] sm:h-[680px] ${className}`}
       aria-label="Website preview"
     >
       {/* Hidden SVG Color Matrix Filter Definitions for Color Blindness Simulation */}
@@ -186,6 +191,9 @@ export default function WebsitePreview({
           onVisionModeChange={onVisionModeChange}
           onViewportChange={onViewportChange}
           onRefresh={handleRefresh}
+          readerOpen={readerOpen}
+          onReaderToggle={() => setReaderOpen((open) => !open)}
+          readerButtonRef={readerButtonRef}
         />
       </div>
 
@@ -211,7 +219,8 @@ export default function WebsitePreview({
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-100/80 dark:bg-zinc-950/70">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-100/80 dark:bg-zinc-950/70">
+        {readerOpen && <PreviewScreenReader frameRef={iframeRef} sourceKey={previewUrl || srcDoc} demo={demo} onClose={closeReader} />}
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-5">
           <div
             className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_8px_28px_rgba(0,0,0,0.09),0_20px_48px_rgba(0,0,0,0.04)] transition-[width,box-shadow,border-color] duration-300 ease-in-out dark:border-zinc-700 dark:shadow-[0_12px_36px_rgba(0,0,0,0.3)] ${
@@ -228,7 +237,7 @@ export default function WebsitePreview({
 
               <div className="flex min-w-0 flex-1 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-900">
                 <span className="truncate text-center font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
-                  {url || 'sample-page.design'}
+                  {url || DEMO_HOST}
                 </span>
               </div>
 

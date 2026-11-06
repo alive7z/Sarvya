@@ -1,6 +1,8 @@
+import { DEMO_HOST } from '../../data/demoAudit.js';
 import { useState, useRef, useEffect } from 'react';
 import {
   ExternalLink,
+  Volume2,
   Globe2,
   RefreshCw,
   Monitor,
@@ -71,6 +73,9 @@ export default function PreviewToolbar({
   onVisionModeChange,
   onRefresh,
   onViewportChange,
+  readerOpen = false,
+  onReaderToggle,
+  readerButtonRef,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -100,7 +105,7 @@ export default function PreviewToolbar({
       <div className="flex flex-col gap-4 border-b border-zinc-100 bg-white px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-100 bg-accent-50 text-accent-600 dark:border-accent-900/40 dark:bg-accent-500/10 dark:text-accent-400">
               <Eye size={19} strokeWidth={1.9} />
             </div>
 
@@ -113,7 +118,7 @@ export default function PreviewToolbar({
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[9px] font-bold tracking-[0.025em] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      demo ? 'bg-orange-500' : 'bg-emerald-500'
+                      demo ? 'bg-accent-500' : 'bg-emerald-500'
                     }`}
                   />
                   {demo ? 'DEMO PAGE' : 'CONTROLLED PREVIEW'}
@@ -130,7 +135,7 @@ export default function PreviewToolbar({
               <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
                 <Globe2 size={13} className="shrink-0" />
                 <span className="max-w-[230px] truncate sm:max-w-[320px]">
-                  {url || 'https://sample-page.design'}
+                  {url || `https://${DEMO_HOST}`}
                 </span>
               </div>
             </div>
@@ -274,11 +279,24 @@ export default function PreviewToolbar({
           />
 
           <button
+            ref={readerButtonRef}
+            type="button"
+            aria-label={readerOpen ? 'Hide screen reader' : 'Open screen reader'}
+            title="Screen reader"
+            aria-expanded={readerOpen}
+            aria-controls="preview-screen-reader"
+            onClick={onReaderToggle}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${readerOpen ? 'border-accent-300 bg-accent-50 text-accent-700 dark:border-accent-800 dark:bg-accent-950/40 dark:text-accent-400' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'}`}
+          >
+            <Volume2 size={16} />
+          </button>
+
+          <button
             type="button"
             aria-label="Refresh preview"
             title="Refresh preview"
             onClick={onRefresh}
-            className="group flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400"
+            className="group flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400"
           >
             <RefreshCw
               size={16}
@@ -304,7 +322,7 @@ export default function PreviewToolbar({
               onClick={() => changeViewport('desktop')}
               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
                 viewport === 'desktop'
-                  ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-700 dark:text-orange-400'
+                  ? 'bg-white text-accent-600 shadow-sm dark:bg-zinc-700 dark:text-accent-400'
                   : 'text-zinc-400 hover:bg-white/80 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200'
               }`}
             >
@@ -319,7 +337,7 @@ export default function PreviewToolbar({
               onClick={() => changeViewport('mobile')}
               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
                 viewport === 'mobile'
-                  ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-700 dark:text-orange-400'
+                  ? 'bg-white text-accent-600 shadow-sm dark:bg-zinc-700 dark:text-accent-400'
                   : 'text-zinc-400 hover:bg-white/80 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200'
               }`}
             >
@@ -335,7 +353,7 @@ export default function PreviewToolbar({
               const target = url || 'about:blank';
               window.open(target, '_blank', 'noopener');
             }}
-            className="group flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400"
+            className="group flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400"
           >
             <ExternalLink size={16} />
           </button>
@@ -346,7 +364,7 @@ export default function PreviewToolbar({
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${
-              active ? 'bg-orange-500' : 'bg-zinc-300 dark:bg-zinc-600'
+              active ? 'bg-accent-500' : 'bg-zinc-300 dark:bg-zinc-600'
             }`}
           />
 

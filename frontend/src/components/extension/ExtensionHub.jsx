@@ -1,3 +1,4 @@
+import PageHeader, { PageSections } from '../layout/PageHeader.jsx';
 import { useState } from 'react';
 import {
   Puzzle,
@@ -25,26 +26,8 @@ export default function ExtensionHub({ onNavigate }) {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-orange-200/80 bg-gradient-to-br from-orange-50 via-white to-orange-50/30 p-8 shadow-sm dark:border-orange-900/40 dark:from-orange-950/20 dark:via-zinc-900 dark:to-zinc-900/60 sm:p-10">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-3 py-1 text-[11px] font-bold text-orange-700 shadow-sm dark:border-orange-900/60 dark:bg-zinc-800 dark:text-orange-400">
-              <Sparkles size={13} className="text-orange-500" />
-              MANIFEST V3 BROWSER EXTENSION READY
-            </div>
-
-            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-4xl">
-              Audit & Fix <span className="text-orange-500">Any Website</span> On The Web
-            </h1>
-
-            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 sm:text-base">
-              The official AccessLens browser extension injects axe-core directly into any live tab you visit (GitHub, Wikipedia, Amazon, or your internal localhost). It places pulsing error markers directly over failing HTML elements, tests code remediations in the live DOM, and simulates screen reader audio & color blindness.
-            </p>
-          </div>
-
-          <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+    <div className="page-stack">
+      <PageHeader title="Browser extension" description="Installation instructions and a guide to the AccessLens browser extension's audit and review tools." category="Integrations" icon={Puzzle} onNavigate={onNavigate} actions={(
             <button
               type="button"
               onClick={handleCopyPath}
@@ -52,15 +35,13 @@ export default function ExtensionHub({ onNavigate }) {
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
               <span>{copied ? 'Folder Path Copied!' : 'Copy Extension Path'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
+            </button>      )} />
+      <PageSections items={[["extension-install", "Installation"], ["extension-features", "Capabilities"]]} />
 
       {/* 3-Step Installation Guide */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+      <section id="extension-install" className="workspace-panel rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
         <h2 className="text-lg font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-          30-Second Quick Installation (Chrome, Edge, Brave, Opera)
+          Install the extension
         </h2>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           No compile or build step required. The extension is pre-bundled and ready to load.
@@ -119,10 +100,13 @@ export default function ExtensionHub({ onNavigate }) {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Feature Showcase Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <section id="extension-features">
+        <h2 className="mb-2 text-[18px] text-zinc-900 dark:text-zinc-100">Extension capabilities</h2>
+        <p className="mb-5 text-[13px] text-zinc-500 dark:text-zinc-400">An overview of scanning, inspection, and remediation tools.</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
             <Layers size={20} />
@@ -195,6 +179,7 @@ export default function ExtensionHub({ onNavigate }) {
           </p>
         </div>
       </div>
+      </section>
     </div>
   );
 }

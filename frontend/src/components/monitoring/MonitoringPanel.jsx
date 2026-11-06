@@ -1,3 +1,4 @@
+import PageHeader, { PageSections } from '../layout/PageHeader.jsx';
 
 import { useEffect, useState } from 'react';
 import {
@@ -22,7 +23,7 @@ import {
   updateMonitor,
 } from '../../services/monitorService.js';
 
-export default function MonitoringPanel() {
+export default function MonitoringPanel({ onNavigate }) {
   const [monitors, setMonitors] = useState([]);
   const [url, setUrl] = useState('');
   const [frequency, setFrequency] = useState('weekly');
@@ -101,24 +102,13 @@ export default function MonitoringPanel() {
   const pausedCount = monitors.length - activeCount;
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[30px] font-extrabold tracking-[-1.2px] text-zinc-900 dark:text-zinc-100 sm:text-[36px]">
-            Monitoring
-          </h1>
-
-          <p className="mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Schedule recurring scans and track accessibility regressions
-            across your websites.
-          </p>
-        </div>
-
+    <div className="page-stack">
+      <PageHeader title="Monitoring" description="Manage recurring audits and review monitoring schedules in one place." category="Manage" icon={MonitorCheck} onNavigate={onNavigate} actions={(
         <button
           type="button"
           onClick={refresh}
           disabled={loading}
-          className="group inline-flex h-11 w-fit items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 text-[12px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-700"
+          className="group inline-flex h-11 w-fit items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 text-[12px] font-bold text-zinc-700 shadow-sm transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-700"
         >
           <RefreshCw
             size={16}
@@ -130,9 +120,11 @@ export default function MonitoringPanel() {
           />
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
-      </section>
+      )} />
+      <PageSections items={[["monitor-overview", "Overview"], ["monitor-create", "Create monitor"], ["monitor-sites", "Monitored websites"]]} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+      <div id="monitor-overview" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           {
             label: 'Total Websites',
@@ -161,7 +153,7 @@ export default function MonitoringPanel() {
           return (
             <article
               key={stat.label}
-              className="group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_3px_14px_rgba(0,0,0,0.035)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,0,0,0.07)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10"
+              className="summary-card group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_3px_14px_rgba(0,0,0,0.035)] transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.07)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10"
             >
               <div className="flex items-start justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-[0.07em] text-zinc-500 dark:text-zinc-400">
@@ -183,7 +175,7 @@ export default function MonitoringPanel() {
         })}
       </div>
 
-      <section className="overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10">
+      <section id="monitor-sites" className="workspace-panel overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_15px_40px_rgba(0,0,0,0.035)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/10">
         <div className="flex flex-col gap-4 border-b border-zinc-100 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-zinc-800">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
@@ -239,7 +231,7 @@ export default function MonitoringPanel() {
             </div>
           </div>
 
-          <form
+          <form id="monitor-create"
             onSubmit={addMonitor}
             className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_170px_auto] lg:items-end"
           >
@@ -303,7 +295,7 @@ export default function MonitoringPanel() {
             <button
               type="submit"
               disabled={submitting}
-              className="group flex h-[49px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-orange-600 dark:hover:bg-orange-500"
+              className="group flex h-[49px] items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-5 text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 hover:bg-zinc-800 hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-orange-600 dark:hover:bg-orange-500"
             >
               {submitting ? (
                 <LoaderCircle size={16} className="animate-spin" />
@@ -409,7 +401,7 @@ export default function MonitoringPanel() {
                       type="button"
                       onClick={() => toggle(item)}
                       disabled={isUpdating}
-                      className={`inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-[11px] font-bold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto ${
+                      className={`inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-[11px] font-bold shadow-sm transition-all duration-200 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto ${
                         isActive
                           ? 'border-zinc-200 bg-white text-zinc-700 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-orange-800 dark:hover:bg-orange-500/10 dark:hover:text-orange-400'
                           : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20'

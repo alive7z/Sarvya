@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:reader": "node --test tests/screenReader.browser.test.mjs"
   },
   "dependencies": {
     "axios": "^1.7.9",

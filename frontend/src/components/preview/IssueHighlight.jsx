@@ -1,15 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
+  const previousSelector = useRef(selector);
+
   useEffect(() => {
+    const selectionChanged = previousSelector.current !== selector;
+    previousSelector.current = selector;
     const frame = frameRef?.current;
     if (!frame) return;
 
     let animationFrame;
 
     const highlight = () => {
-      // 1. Send postMessage into the iframe so the injected overlay script triggers inspection & tooltip
-      if (selector) {
+      // Initial highlighting must not ask embedded scripts to scroll the host page.
+      // Selection changes and explicit Inspect actions still activate its tooltip.
+      if (selector && (selectionChanged || inspectTrigger)) {
         try {
           frame.contentWindow?.postMessage(
             { type: 'ACCESSLENS_INSPECT', selector },
@@ -70,12 +75,17 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
         });
 
         animationFrame = requestAnimationFrame(() => {
-          elements[0]?.scrollIntoView({
+          const target = elements[0];
+          const previewWindow = doc.defaultView;
+          if (!target || !previewWindow) return;
+          const rect = target.getBoundingClientRect();
+          // scrollIntoView can traverse iframe boundaries. Scroll only this document.
+          previewWindow.scrollTo({
+            top: Math.max(0, previewWindow.scrollY + rect.top - (previewWindow.innerHeight - rect.height) / 2),
+            left: Math.max(0, previewWindow.scrollX + rect.left - (previewWindow.innerWidth - rect.width) / 2),
             behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
               ? 'instant'
               : 'smooth',
-            block: 'center',
-            inline: 'nearest',
           });
         });
 

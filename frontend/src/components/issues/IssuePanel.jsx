@@ -1,4 +1,4 @@
-import { Check, MoreHorizontal, AlertTriangle, ListChecks, ShieldCheck } from 'lucide-react';
+import { Check, MoreHorizontal, ListChecks, ShieldCheck } from 'lucide-react';
 import IssueCard from './IssueCard.jsx';
 import IssueFilters from './IssueFilters.jsx';
 
@@ -46,83 +46,63 @@ export default function IssuePanel({
       color: 'bg-amber-500',
       count: issues.filter((i) => i.severity === 'moderate').length,
     },
+    { label: 'Minor', severity: 'minor', color: 'bg-blue-500', count: issues.filter((i) => i.severity === 'minor').length },
   ];
 
   return (
     <aside
-      className={`flex h-[650px] min-w-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_5px_25px_rgba(0,0,0,0.18)] sm:h-[680px] ${className}`}
+      className={`workspace-panel flex h-[650px] min-w-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.035),0_14px_35px_rgba(0,0,0,0.035)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_5px_25px_rgba(0,0,0,0.18)] sm:h-[680px] ${className}`}
       aria-label="Detected accessibility issues"
     >
-      <div className="flex shrink-0 items-start justify-between gap-4 px-5 pb-5 pt-6 sm:px-6">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/40 dark:bg-orange-500/10 dark:text-orange-400">
-            <ListChecks size={21} strokeWidth={1.9} />
-          </div>
-
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[17px] font-extrabold tracking-[-0.5px] text-zinc-900 dark:text-zinc-100">
-                Detected issues
-              </h2>
-
-              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 px-2 font-mono text-[11px] font-bold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                {visibleIssues.length}
-              </span>
-
-              {/* View Mode Toggle: By Rule vs All Issues */}
-              {totalNodesCount > 0 && (
-                <div className="ml-1 inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => onViewModeChange?.('rules')}
-                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition-all ${
-                      viewMode === 'rules'
-                        ? 'bg-white text-orange-600 shadow-2xs dark:bg-zinc-900 dark:text-orange-400'
-                        : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-                    }`}
-                    title="Group issues by rule (with node switcher inside)"
-                  >
-                    By Rule ({rulesCount || issues.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onViewModeChange?.('elements')}
-                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition-all ${
-                      viewMode === 'elements'
-                        ? 'bg-white text-orange-600 shadow-2xs dark:bg-zinc-900 dark:text-orange-400'
-                        : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-                    }`}
-                    title="View all individual failing elements (matches Total Issues count)"
-                  >
-                    All Issues ({totalNodesCount})
-                  </button>
-                </div>
-              )}
+      <div className="shrink-0 px-4 pb-4 pt-5 sm:px-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              <ListChecks size={18} strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-[16px] tracking-[-0.3px] text-zinc-900 dark:text-zinc-100">
+                  Detected issues
+                </h2>
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" aria-label={`${visibleIssues.length} matching ${viewMode === 'elements' ? 'elements' : 'rules'}`}>
+                  {visibleIssues.length}
+                </span>
+              </div>
+              <p className="mt-1 text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
+                Review findings and suggested fixes.
+              </p>
             </div>
-
-            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              {viewMode === 'elements'
-                ? `Showing all ${visibleIssues.length} affected DOM elements with individual fixes`
-                : `Grouped into ${visibleIssues.length} rules (${totalNodesCount} total affected elements)`}
-            </p>
           </div>
+          <button
+            type="button"
+            aria-label="Issue panel options"
+            title="Issue panel options"
+            onClick={() => onAction?.(viewMode === 'elements' ? 'Viewing all individual failing DOM elements.' : 'Viewing issues grouped by WCAG accessibility rule.')}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          >
+            <MoreHorizontal size={19} />
+          </button>
         </div>
-
-        <button
-          type="button"
-          aria-label="Issue panel options"
-          title="Issue panel options"
-          onClick={() =>
-            onAction?.(
-              viewMode === 'elements'
-                ? 'Viewing all individual failing DOM elements.'
-                : 'Viewing issues grouped by WCAG accessibility rule.'
-            )
-          }
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-white"
-        >
-          <MoreHorizontal size={19} />
-        </button>
+        {totalNodesCount > 0 && (
+          <div role="group" aria-label="Issue view" className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-zinc-100/80 p-1 dark:bg-zinc-800">
+            {[
+              ['rules', 'By rule', rulesCount || issues.length],
+              ['elements', 'All elements', totalNodesCount],
+            ].map(([mode, label, count]) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={viewMode === mode}
+                onClick={() => onViewModeChange?.(mode)}
+                className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-2 text-[12px] font-medium ${viewMode === mode ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100'}`}
+              >
+                {label}
+                <span className="text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">{count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0">
@@ -137,19 +117,18 @@ export default function IssuePanel({
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 [scrollbar-color:#d4d4d8_transparent] [scrollbar-width:thin] sm:px-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-zinc-50/60 px-3 py-3 dark:bg-zinc-950/20 [scrollbar-color:#d4d4d8_transparent] [scrollbar-width:thin] sm:px-4">
         {visibleIssues.length > 0 ? (
-          <div className="space-y-3">
-            {visibleIssues.map((issue, index) => (
+          <div className="space-y-2.5">
+            {visibleIssues.map((issue) => (
               <IssueCard
                 key={issue.id}
                 issue={issue}
-                index={index}
                 selected={activeId === issue.id}
                 expanded={expanded === issue.id}
                 onSelect={() => onSelect(issue)}
                 onInspect={(target) => onSelect(target || issue, true)}
-                onCopy={() => onCopy(issue.fix)}
+                onCopy={onCopy}
                 onIgnore={() => onIgnore(issue)}
                 onAction={onAction}
                 onVerify={onVerify}
@@ -179,7 +158,7 @@ export default function IssuePanel({
 
             <h3 className="mt-5 text-[15px] font-bold tracking-tight text-zinc-800 dark:text-zinc-200">
               {scanState === 'completed' && issues.length === 0
-                ? 'Flawless! 0 Accessibility Issues'
+                ? 'No automated issues detected'
                 : issues.length
                 ? 'No matching issues'
                 : 'No scan results yet'}
@@ -187,7 +166,7 @@ export default function IssuePanel({
 
             <p className="mt-2 max-w-[290px] text-[12px] leading-6 text-zinc-500 dark:text-zinc-400">
               {scanState === 'completed' && issues.length === 0
-                ? 'This webpage passed all automated WCAG 2.1 Level A & AA checks with zero detected barriers.'
+                ? 'No violations were reported by this scan. Manual accessibility checks are still recommended.'
                 : issues.length
                 ? 'No findings match your current filters. Try adjusting your search or filter options.'
                 : 'Run an accessibility audit to discover and review issues across your website.'}
@@ -196,7 +175,7 @@ export default function IssuePanel({
             {scanState === 'completed' && issues.length === 0 && (
               <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <Check size={14} />
-                100/100 WCAG Compliance
+                Automated scan complete
               </span>
             )}
 
@@ -210,8 +189,8 @@ export default function IssuePanel({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-zinc-100 bg-zinc-50/70 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-800/30 sm:px-5">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div className="shrink-0 border-t border-zinc-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {severityCounts.map((item) => (
             <div
               key={item.severity}
@@ -225,7 +204,7 @@ export default function IssuePanel({
                 {item.label}
               </span>
 
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-zinc-200 bg-white px-1.5 font-mono text-[10px] font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              <span className="inline-flex h-5 min-w-4 items-center justify-center rounded px-0.5 text-[10px] font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 {item.count}
               </span>
             </div>

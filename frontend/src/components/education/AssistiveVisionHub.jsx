@@ -1,3 +1,4 @@
+import PageHeader from '../layout/PageHeader.jsx';
 import { useState } from 'react';
 import {
   Eye,
@@ -138,27 +139,13 @@ export default function AssistiveVisionHub({ onNavigate }) {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Banner */}
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:border-orange-900 dark:bg-orange-950/50 dark:text-orange-400">
-              <Sparkles size={13} />
-              Accessibility Knowledge & Tools
-            </span>
-            <h1 className="mt-3 text-[26px] font-black tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-[32px]">
-              Color Blindness & Screen Reader Engineering Hub
-            </h1>
-            <p className="mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Learn how blind users navigate using NVDA and VoiceOver, and how color-blind individuals perceive your UI. Test real-time WCAG contrast ratios below.
-            </p>
-          </div>
-
-          <div className="flex shrink-0 gap-2">
+    <div className="page-stack">
+      <PageHeader title="Assistive tech & vision" description="Explore color perception, test contrast, and learn how screen readers navigate a page." category="Resources" icon={Glasses} onNavigate={onNavigate} />
+          <div role="group" aria-label="Learning topics" className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
             <button
               type="button"
               onClick={() => setActiveTab('colorblind')}
+              aria-pressed={activeTab === 'colorblind'}
               className={`rounded-xl px-4 py-2.5 text-[12px] font-bold transition-all ${
                 activeTab === 'colorblind'
                   ? 'bg-zinc-900 text-white shadow-md dark:bg-orange-600'
@@ -171,6 +158,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
             <button
               type="button"
               onClick={() => setActiveTab('screenreaders')}
+              aria-pressed={activeTab === 'screenreaders'}
               className={`rounded-xl px-4 py-2.5 text-[12px] font-bold transition-all ${
                 activeTab === 'screenreaders'
                   ? 'bg-zinc-900 text-white shadow-md dark:bg-orange-600'
@@ -181,13 +169,11 @@ export default function AssistiveVisionHub({ onNavigate }) {
               Screen Readers (Blind Users)
             </button>
           </div>
-        </div>
-      </div>
 
       {activeTab === 'colorblind' && (
         <>
           {/* Real-Time Interactive Color Contrast Checker */}
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="workspace-panel overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="border-b border-zinc-100 px-6 py-5 sm:px-8 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
@@ -414,7 +400,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
           </div>
 
           {/* How Blind Users Navigate & Top Engineering Guidelines */}
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="workspace-panel overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="text-[20px] font-extrabold text-zinc-900 dark:text-zinc-100">
               How Blind Users Actually Experience the Web (The Accessibility Tree)
             </h2>
