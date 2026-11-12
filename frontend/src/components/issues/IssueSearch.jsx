@@ -7,6 +7,7 @@ export default function IssueSearch({ value, onChange }) {
 
   useEffect(() => {
     const handleShortcut = (event) => {
+      if (inputRef.current?.closest('[hidden]')) return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         inputRef.current?.focus();
