@@ -1,3 +1,8 @@
+import { RunError, isTransient, publicError } from './runErrors.js';
+import { setTimeout as delay } from 'node:timers/promises';
+import { Agent } from 'undici';
+import { publicLookup } from './publicNetwork.js';
+const publicDispatcher = new Agent({ connect: { lookup: publicLookup, timeout: 10000 } });
 import * as cheerio from 'cheerio';
 import { normalizeUrl, assertPublicUrl } from './urlValidator.js';
 
@@ -6,11 +11,12 @@ const MAX_REDIRECTS = 5;
 const MAX_HTML_BYTES = 2.5 * 1024 * 1024;
 const REQUEST_DELAY_MS = 150;
 
-export async function safeFetch(rawUrl, allowedOrigin) {
+export async function safeFetch(rawUrl, allowedOrigin, { signal } = {}) {
   let currentUrl = normalizeUrl(rawUrl);
   const visited = new Set();
 
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    signal?.throwIfAborted();
     if (new URL(currentUrl).origin !== allowedOrigin) {
       throw new Error(`Cross-origin navigation blocked from ${allowedOrigin} to ${new URL(currentUrl).origin}`);
     }
@@ -22,22 +28,17 @@ export async function safeFetch(rawUrl, allowedOrigin) {
 
     await assertPublicUrl(currentUrl);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    signal?.throwIfAborted();
+    const requestSignal = AbortSignal.any([AbortSignal.timeout(TIMEOUT_MS), ...(signal ? [signal] : [])]);
 
-    let response;
-    try {
-      response = await fetch(currentUrl, {
-        redirect: 'manual',
-        signal: controller.signal,
+    const response = await fetch(currentUrl, {
+        redirect: 'manual', dispatcher: publicDispatcher,
+        signal: requestSignal,
         headers: {
-          'User-Agent': 'AccessLens-Auditor/1.0 (+https://accesslens.dev)',
+          'User-Agent': 'Sarvya-Auditor/1.0',
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         },
       });
-    } finally {
-      clearTimeout(timeout);
-    }
 
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       const location = response.headers.get('location');
@@ -57,7 +58,7 @@ export async function safeFetch(rawUrl, allowedOrigin) {
 
     if (!response.ok) {
       await response.body?.cancel();
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      throw new RunError(`The target returned HTTP ${response.status}.`, { retryable: response.status === 429 || response.status >= 500 });
     }
 
     const contentType = response.headers.get('content-type') || '';
@@ -99,7 +100,7 @@ export async function safeFetch(rawUrl, allowedOrigin) {
   throw new Error('Unable to complete request.');
 }
 
-export async function crawlWebsite(startUrl, { maxPages = 10, maxDepth = 2 } = {}) {
+export async function crawlWebsite(startUrl, { maxPages = 10, maxDepth = 2, signal, onProgress = async () => {} } = {}) {
   const boundedMaxPages = Math.min(Math.max(Number(maxPages) || 1, 1), 50);
   const boundedMaxDepth = Math.min(Math.max(Number(maxDepth) || 0, 0), 3);
 
@@ -115,11 +116,12 @@ export async function crawlWebsite(startUrl, { maxPages = 10, maxDepth = 2 } = {
   let attempted = 0;
 
   while (queue.length > 0 && attempted < boundedMaxPages) {
+    signal?.throwIfAborted();
     const current = queue.shift();
     attempted++;
 
     try {
-      const result = await safeFetch(current.url, origin);
+      const result = await safeFetch(current.url, origin, { signal });
       const $ = cheerio.load(result.html);
       const links = new Set();
 
@@ -170,16 +172,17 @@ export async function crawlWebsite(startUrl, { maxPages = 10, maxDepth = 2 } = {
         }
       }
     } catch (error) {
+      signal?.throwIfAborted();
       errors.push({
         url: current.url,
         depth: current.depth,
-        message: error.message,
+        message: publicError(error),
+        retryable: isTransient(error),
       });
     }
 
-    if (queue.length > 0 && attempted < boundedMaxPages) {
-      await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS));
-    }
+    await onProgress({ stage: 'discovery', discoveredPages: scheduled.size, crawledPages: attempted, failedPages: errors.length, currentUrl: current.url });
+    if (queue.length > 0 && attempted < boundedMaxPages) await delay(REQUEST_DELAY_MS, undefined, { signal });
   }
 
   return {
