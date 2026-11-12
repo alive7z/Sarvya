@@ -1,4 +1,6 @@
 import { chromium } from 'playwright';
+import { load } from 'cheerio';
+import { browserEnvironment } from './publicNetwork.js';
 import AxeBuilder from '@axe-core/playwright';
 
 export function generateFix(ruleId, htmlSnippet = '', failureSummary = '') {
@@ -71,7 +73,7 @@ export function generateFix(ruleId, htmlSnippet = '', failureSummary = '') {
     }
 
     case 'document-title': {
-      return '<title>Descriptive and Unique Page Title - AccessLens</title>';
+      return '<title>Descriptive and Unique Page Title - Sarvya</title>';
     }
 
     case 'meta-viewport': {
@@ -96,27 +98,6 @@ export function generateFix(ruleId, htmlSnippet = '', failureSummary = '') {
   }
 }
 
-let warmBrowser = null;
-
-async function getWarmBrowser() {
-  if (!warmBrowser || !warmBrowser.isConnected()) {
-    warmBrowser = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--mute-audio',
-      ],
-    });
-  }
-  return warmBrowser;
-}
-
 export function buildVerificationDocument(ruleId, proposedFix = '') {
   const clean = (proposedFix || '').trim();
 
@@ -124,21 +105,21 @@ export function buildVerificationDocument(ruleId, proposedFix = '') {
     return clean.includes('<html')
       ? clean.includes('lang=')
         ? clean
-        : clean.replace(/<html/i, '<html lang="en"')
-      : `<!DOCTYPE html><html lang="en"><head><title>Test</title></head><body>Fix verified</body></html>`;
+        : clean
+      : `<!DOCTYPE html><html><head><title>Test</title></head><body>${clean}</body></html>`;
   }
 
   if (ruleId === 'document-title') {
     const titleTag = clean.includes('<title')
       ? clean
-      : `<title>Accessible Page Title - AccessLens</title>`;
+      : '';
     return `<!DOCTYPE html><html lang="en"><head>${titleTag}</head><body><h1>Document Title Verified</h1></body></html>`;
   }
 
   if (ruleId === 'meta-viewport') {
     const metaTag = clean.includes('<meta')
       ? clean
-      : `<meta name="viewport" content="width=device-width, initial-scale=1">`;
+      : '';
     return `<!DOCTYPE html><html lang="en"><head><title>Viewport Test</title>${metaTag}</head><body>Content</body></html>`;
   }
 
@@ -162,14 +143,23 @@ export async function verifyFix(ruleId, proposedFix) {
     throw new Error('A proposed fix string is required for verification.');
   }
 
-  let context;
+  if (proposedFix.length > 100000 || typeof ruleId !== 'string' || !ruleId || ruleId === 'unknown') throw new Error('Provide a known rule ID and a snippet under 100 KB.');
+  let context, browser, timeout;
   try {
-    const browser = await getWarmBrowser();
-    context = await browser.newContext();
+    browser = await chromium.launch({ headless: true, env: browserEnvironment(), chromiumSandbox: true, timeout: 15000 });
+    timeout = setTimeout(() => browser.close().catch(() => {}), 20000);
+    context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false });
+    await context.route('**/*', route => route.abort());
+    await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage();
 
     const testHtml = buildVerificationDocument(ruleId, proposedFix);
-    await page.setContent(testHtml, { waitUntil: 'domcontentloaded' });
+    // Proposed markup is untrusted: no scripts, frames, event handlers or network.
+    const document = load(testHtml);
+    document('script,iframe,object,embed,base,meta[http-equiv]').remove();
+    document('*').each((_i, el) => { for (const key of Object.keys(el.attribs || {})) if (/^on/i.test(key)) document(el).removeAttr(key); });
+    document('head').prepend(`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:">`);
+    await page.setContent(document.html(), { waitUntil: 'domcontentloaded', timeout: 10000 });
 
     let builder = new AxeBuilder({ page });
     if (ruleId && ruleId !== 'unknown') {
@@ -185,7 +175,9 @@ export async function verifyFix(ruleId, proposedFix) {
       (v) => !ruleId || v.id === ruleId
     );
 
-    const isVerified = remainingViolations.length === 0;
+    const applicable = [...results.passes, ...results.violations].some(v => v.id === ruleId);
+    const uncertain = results.incomplete.some(v => v.id === ruleId);
+    const isVerified = applicable && !uncertain && remainingViolations.length === 0;
 
     return {
       verified: isVerified,
@@ -194,7 +186,7 @@ export async function verifyFix(ruleId, proposedFix) {
       timestamp: new Date().toISOString(),
       message: isVerified
         ? `Passed! axe-core confirmed 0 violations for rule "${ruleId}".`
-        : `Verification incomplete: rule "${ruleId}" is still flagging issues.`,
+        : `Verification incomplete: the rule failed, was inapplicable, or requires manual review.`,
       remainingViolations: remainingViolations.map((v) => ({
         id: v.id,
         help: v.help,
@@ -202,6 +194,8 @@ export async function verifyFix(ruleId, proposedFix) {
       })),
     };
   } finally {
-    if (context) await context.close();
+    clearTimeout(timeout);
+    if (context) await context.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
   }
 }
