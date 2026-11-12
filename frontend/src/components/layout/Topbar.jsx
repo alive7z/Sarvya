@@ -114,7 +114,8 @@ export default function Topbar({
           <button
             type="button"
             onClick={() => onNavigate('extension')}
-            className={`hidden items-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-bold transition-all sm:flex ${
+            aria-label="Browser Extension"
+            className={`hidden h-10 w-10 items-center justify-center gap-1.5 rounded-xl border py-2 text-[11px] font-bold transition-all sm:flex 2xl:w-auto 2xl:px-3 ${
               page === 'extension'
                 ? 'border-accent-500 bg-accent-50 text-accent-600 dark:border-accent-900/60 dark:bg-accent-950/40 dark:text-accent-400'
                 : 'border-zinc-200 bg-white text-zinc-700 shadow-sm hover:border-accent-300 hover:text-accent-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
@@ -122,7 +123,7 @@ export default function Topbar({
             title="Install Sarvya Chrome & Edge Extension"
           >
             <Puzzle size={14} className="text-accent-500" />
-            <span>Browser Extension</span>
+            <span className="hidden 2xl:inline">Browser Extension</span>
           </button>
 
           <button type="button" onClick={vision.edit} aria-label="Colour preferences" title="Colour preferences" className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"><Glasses size={19} aria-hidden="true" /></button>
