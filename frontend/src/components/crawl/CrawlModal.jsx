@@ -85,10 +85,14 @@ export default function CrawlModal({
 
                   <input
                     id="crawl-url"
-                    type="url"
+                    type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={2048}
                     value={url}
                     onChange={(e) => onUrlChange(e.target.value)}
-                    placeholder="https://example.com"
+                    placeholder="www.example.com or https://example.com"
                     autoComplete="url"
                     required
                     className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] font-medium text-zinc-800 outline-none placeholder:font-normal placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100"
@@ -181,7 +185,7 @@ export default function CrawlModal({
                   </div>
 
                   <p className="mt-1.5 text-[11px] leading-[1.7] text-emerald-800/80 dark:text-emerald-200/70">
-                    AccessLens will crawl discovered internal routes and run axe-core accessibility checks on each page.
+                    Sarvya will crawl discovered internal routes and run axe-core accessibility checks on each page.
                   </p>
                 </div>
               </div>
