@@ -45,6 +45,8 @@ export default function WebsitePreview({
   demo,
   url,
   scanId,
+  scanState,
+  capturedHtml,
   selector,
   active,
   issues = [],
@@ -55,6 +57,7 @@ export default function WebsitePreview({
   onViewportChange,
   onRefresh,
 }) {
+  const awaitingScan = !demo && scanState !== 'completed';
   const isMobile = viewport === 'mobile';
   const [frameFailed, setFrameFailed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,7 +68,7 @@ export default function WebsitePreview({
   // Build preview URL: use relative path so Vite proxy proxies it to backend
   // Include scanId so the backend injects the interactive red error markers & tooltips!
   const previewUrl =
-    !demo && url
+    !demo && !awaitingScan && url
       ? `/api/preview?url=${encodeURIComponent(url)}${
           scanId ? `&scanId=${encodeURIComponent(scanId)}` : ''
         }`
@@ -220,7 +223,7 @@ export default function WebsitePreview({
       )}
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-100/80 dark:bg-zinc-950/70">
-        {readerOpen && <PreviewScreenReader frameRef={iframeRef} sourceKey={previewUrl || srcDoc} demo={demo} onClose={closeReader} />}
+        {readerOpen && !awaitingScan && <PreviewScreenReader frameRef={iframeRef} capturedHtml={capturedHtml} sourceKey={previewUrl || srcDoc} demo={demo} onClose={closeReader} />}
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-5">
           <div
             className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_8px_28px_rgba(0,0,0,0.09),0_20px_48px_rgba(0,0,0,0.04)] transition-[width,box-shadow,border-color] duration-300 ease-in-out dark:border-zinc-700 dark:shadow-[0_12px_36px_rgba(0,0,0,0.3)] ${
@@ -250,7 +253,11 @@ export default function WebsitePreview({
             </div>
 
             {/* Preview Frame Container with live SVG filter applied */}
-            {previewUrl && frameFailed ? (
+            {awaitingScan ? (
+              <div role="status" className="flex flex-1 items-center justify-center p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                {['failed', 'cancelled'].includes(scanState) ? 'No preview is available for this run. Start another scan to inspect the website.' : 'The website preview will be available when the scan completes.'}
+              </div>
+            ) : previewUrl && frameFailed ? (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-white p-6 text-center dark:bg-zinc-900">
                 <div className="text-4xl">🔍</div>
                 <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
@@ -291,7 +298,7 @@ export default function WebsitePreview({
                   ref={iframeRef}
                   src={previewUrl}
                   srcDoc={previewUrl ? undefined : srcDoc}
-                  sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                  sandbox={demo ? "allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox" : "allow-scripts allow-forms allow-popups"}
                   data-selected-selector={selector || ''}
                   onLoad={handleIframeLoad}
                   onError={handleIframeError}
