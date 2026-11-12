@@ -20,6 +20,12 @@ export default function ScanForm({
   busy,
   demo,
   state,
+  progress,
+  stage,
+  attempt,
+  maxAttempts,
+  onCancel,
+  cancelPending,
   error,
 }) {
   return (
@@ -37,7 +43,7 @@ export default function ScanForm({
               </h2>
 
               <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Enter a public website URL to inspect its accessibility.
+                Enter example.com, www.example.com, or a full URL. HTTPS is added when missing.
               </p>
             </div>
           </div>
@@ -55,7 +61,7 @@ export default function ScanForm({
               }`}
             />
 
-            {demo ? 'SAMPLE DATA' : 'API CONNECTED'}
+            {demo ? 'SAMPLE DATA' : 'BACKGROUND SCAN'}
           </span>
         </div>
 
@@ -71,11 +77,16 @@ export default function ScanForm({
             />
 
             <input
-              type="url"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={2048}
+              disabled={busy}
               aria-label="Website URL"
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="www.example.com or https://example.com"
               autoComplete="url"
               className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] font-medium text-zinc-800 outline-none placeholder:font-normal placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
@@ -83,6 +94,7 @@ export default function ScanForm({
             {url && (
               <button
                 type="button"
+                disabled={busy}
                 aria-label="Clear URL"
                 title="Clear URL"
                 onClick={() => onUrlChange('')}
@@ -117,6 +129,7 @@ export default function ScanForm({
           <button
             type="button"
             onClick={onCrawl}
+            disabled={busy}
             className="group inline-flex h-[52px] shrink-0 items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-5 text-[14px] font-semibold text-zinc-700 shadow-sm transition-all duration-200 hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 hover:shadow-md active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-accent-800 dark:hover:bg-accent-500/10 dark:hover:text-accent-400"
           >
             <Layers3 size={17} />
@@ -132,6 +145,12 @@ export default function ScanForm({
       <div className="border-t border-zinc-100 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-800/20">
         <ScanProgress
           state={state}
+          progress={progress}
+          stage={stage}
+          attempt={attempt}
+          maxAttempts={maxAttempts}
+          onCancel={onCancel}
+          cancelPending={cancelPending}
           error={error}
           demo={demo}
         />
