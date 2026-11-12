@@ -1,0 +1,17 @@
+import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+const root = fileURLToPath(new URL('../', import.meta.url)), release = path.join(root, 'release');
+const run = (args, cwd = root) => execFileSync(process.execPath, args, { cwd, stdio: 'inherit' });
+run(['scripts/build-extension.mjs']); await fs.mkdir(release, { recursive: true });
+const archive = path.join(release, 'sarvya-extension.zip'); await fs.rm(archive, { force: true });
+execFileSync('zip', ['-q', '-r', archive, '.'], { cwd: path.join(root, 'extension/dist'), stdio: 'inherit' });
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+execFileSync(npm, ['pack', '--pack-destination', release], { cwd: path.join(root, 'cli'), stdio: 'inherit' });
+const frontendDownloads = path.join(root, 'frontend/public/downloads'); await fs.mkdir(frontendDownloads, { recursive: true });
+await fs.copyFile(archive, path.join(frontendDownloads, 'sarvya-extension.zip'));
+const artifacts = (await fs.readdir(release)).filter(file => /\.(zip|tgz)$/.test(file)).sort();
+await fs.writeFile(path.join(release, 'SHA256SUMS'), (await Promise.all(artifacts.map(async file => `${createHash('sha256').update(await fs.readFile(path.join(release, file))).digest('hex')}  ${file}`))).join('\n') + '\n');
+console.log('Release artifacts prepared under release/. Nothing was published.');
