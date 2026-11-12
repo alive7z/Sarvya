@@ -24,13 +24,16 @@ function getWcagCriterion(ruleId) {
   return criteria[ruleId] || 'WCAG 2.1';
 }
 
-export async function createScan(url, options = {}) {
-  const { data } = await api.post('/api/scan', {
-    url,
-    maxPages: options.maxPages ?? 1,
-    maxDepth: options.maxDepth ?? 1,
-  });
+export const ACTIVE_SCAN_STATES = ['submitting', 'queued', 'processing', 'retrying', 'cancelling'];
+export const TERMINAL_SCAN_STATES = ['completed', 'failed', 'cancelled'];
 
+export async function createScan(url, options = {}) {
+  const { data } = await api.post('/api/scan', { url, maxPages: options.maxPages ?? 1, maxDepth: options.maxDepth ?? 1 });
+  return normalizeScan(data, url);
+}
+
+export function normalizeScan(data, url = data.startUrl) {
+  if (data.status !== 'completed') return data;
   const pages = Array.isArray(data.results) ? data.results : [];
 
   // Use processed issues from backend if provided, otherwise transform raw violations
@@ -153,7 +156,8 @@ export async function createScan(url, options = {}) {
     throw new Error(failedPage?.error || 'No pages could be scanned.');
   }
 
-  const scanId = data.scanId || `scan-${Date.now()}`;
+  if (!data.scanId) throw new Error('The API returned a result without a scan ID.');
+  const scanId = data.scanId;
 
   const scan = {
     ...data,
@@ -185,10 +189,9 @@ export async function getScan(scanId) {
 
   try {
     const { data } = await api.get(`/api/scans/${encodeURIComponent(scanId)}`);
-    completedScans.set(scanId, data);
-    return data;
-  } catch {
-    throw new Error('Scan result is unavailable. Please run the scan again.');
+    return normalizeScan(data);
+  } catch (error) {
+    throw new Error(error.userMessage || 'Scan status is temporarily unavailable. Reconnecting…');
   }
 }
 
@@ -203,7 +206,7 @@ export async function listScans() {
 
 export async function getScanIssues(scanId) {
   const scan = await getScan(scanId);
-  return scan.issues;
+  return scan.issues || [];
 }
 
 export async function generateFixApi(ruleId, snippet, summary) {
@@ -214,4 +217,18 @@ export async function generateFixApi(ruleId, snippet, summary) {
 export async function verifyFixApi(ruleId, fix) {
   const { data } = await api.post('/api/fixes/verify', { ruleId, fix });
   return data;
+}
+
+export async function cancelScan(scanId) {
+  return (await api.post(`/api/scans/${encodeURIComponent(scanId)}/cancel`)).data;
+}
+
+export function watchScan(scanId, { onUpdate, onError }) {
+  const base = (api.defaults.baseURL || '').replace(/\/$/, '');
+  const source = new EventSource(`${base}/api/scans/${encodeURIComponent(scanId)}/events`);
+  source.addEventListener('status', (event) => {
+    try { onUpdate(JSON.parse(event.data)); } catch { onError(); }
+  });
+  source.onerror = onError;
+  return () => source.close();
 }
