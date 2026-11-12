@@ -30,7 +30,7 @@ export default function CompareModal({
       setLoading(true);
       try {
         const data = await listScans();
-        const past = Array.isArray(data) ? data : [];
+        const past = Array.isArray(data) ? data.filter((scan) => !scan.status || scan.status === 'completed') : [];
         setScans(past);
         // Default to the most recent different scan
         const other = past.find((s) => s.scanId !== currentScan?.scanId);
