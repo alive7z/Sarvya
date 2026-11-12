@@ -21,7 +21,7 @@ import {
 function getLuminance(r, g, b) {
   const [rs, gs, bs] = [r, g, b].map((c) => {
     c = c / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   });
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
@@ -66,7 +66,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
       description:
         'Cones that perceive green light are missing. Reds, greens, browns, and oranges appear very similar, often blending into murky yellows or grays.',
       impact:
-        'Success/Error banners that use only green and red borders are completely indistinguishable without icons or text labels.',
+        'Success and error colours can be difficult to distinguish. Use visible labels and different icons as well as colour.',
       badgeTone: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
     },
     {
@@ -86,7 +86,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
       description:
         'Cones that perceive short-wavelength blue light are missing. Blue appears greenish, and yellow appears violet, magenta, or gray.',
       impact:
-        'Links that rely solely on blue text without underlines are impossible to spot inside black or dark text.',
+        'Blue links can be difficult to distinguish from surrounding text. Underlines provide a cue that does not depend on colour.',
       badgeTone: 'border-blue-200 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
     },
     {
@@ -94,7 +94,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
       commonName: 'Monochromacy (Complete Color Blindness)',
       prevalence: '~0.003% of population (1 in 33,000)',
       description:
-        'Complete absence of all functioning cone cells. Individuals see the world entirely in shades of black, gray, and white.',
+        'Achromatopsia affects cone function and can severely reduce or remove colour perception. Preferences and visual needs vary.',
       impact:
         'Information communicated through color alone is 100% lost. Text readability depends entirely on pure brightness contrast.',
       badgeTone: 'border-zinc-300 bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300',
@@ -278,7 +278,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
                       Accessible Digital Experiences
                     </h3>
                     <p className="text-[13px] leading-relaxed" style={{ color: textColor }}>
-                      Color is powerful, but contrast is mandatory. Over 350 million color-blind people rely on sufficient luminance to read web content without strain.
+                      Readable contrast helps separate text from its background. Labels, icons, and patterns also help communicate information without relying on colour.
                     </p>
                     <button
                       type="button"
@@ -323,7 +323,7 @@ export default function AssistiveVisionHub({ onNavigate }) {
           {/* Color Blindness Types Matrix */}
           <div className="space-y-4">
             <h2 className="text-[20px] font-extrabold text-zinc-900 dark:text-zinc-100">
-              Understanding the 5 Major Forms of Color Vision Deficiency
+              Colour vision differences and related visual needs
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {colorBlindTypes.map((item) => (
