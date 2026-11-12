@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createServer } from 'vite';
 const require = createRequire(new URL('../../backend/package.json', import.meta.url));
 const { chromium } = require('playwright');
 const axe = require('axe-core');
-let server, browser, baseURL;
+let server, browser, baseURL, screenshots;
 before(async () => {
+  screenshots = await fs.mkdtemp(path.join(tmpdir(), 'sarvya-vision-checks-'));
+  console.log(`Vision screenshots: ${screenshots}`);
   server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), server: { host: '127.0.0.1', port: 0 }, logLevel: 'error' });
   await server.listen(); baseURL = `http://127.0.0.1:${server.httpServer.address().port}`; browser = await chromium.launch();
 });
@@ -30,7 +34,7 @@ test('welcome is keyboard usable, saves a preference, restores it, and can be re
   try {
     await page.getByRole('heading', { name: 'Are you colour blind?' }).waitFor();
     await checkContrast(page, 'welcome contrast');
-    await page.screenshot({ path: '/private/tmp/sarvya-vision-welcome.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshots, 'welcome.png'), fullPage: true });
     await page.getByRole('radio', { name: /Red–green · protan/ }).focus(); await page.keyboard.press('Space');
     await page.getByRole('button', { name: 'Continue to workspace' }).click();
     assert.equal(await page.evaluate(() => localStorage.getItem('sarvya-vision-v1')), 'protan');
@@ -108,8 +112,7 @@ for (const [profile, simulation] of Object.entries(profiles)) {
       }
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setEmulatedVisionDeficiency', { type: simulation });
-      await fs.mkdir('/private/tmp/sarvya-vision-checks', { recursive: true });
-      await page.screenshot({ path: `/private/tmp/sarvya-vision-checks/${profile}.png`, fullPage: true });
+      await page.screenshot({ path: path.join(screenshots, `${profile}.png`), fullPage: true });
       // Labels and distinct severity shapes survive hue loss; no page-wide CSS filter is applied.
       assert.ok(await page.getByText('critical', { exact: true }).count());
       assert.equal(await page.locator('.app-shell').evaluate(el => getComputedStyle(el).filter), 'none');
