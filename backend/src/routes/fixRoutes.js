@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { limitAsync } from '../middleware/security.js';
 import { generateFix, verifyFix } from '../services/fixService.js';
 
 const router = Router();
@@ -19,7 +20,7 @@ router.post('/generate', (req, res) => {
 });
 
 // Verify a proposed fix using isolated Chromium + axe-core
-router.post('/verify', async (req, res) => {
+router.post('/verify', limitAsync(2, async (req, res) => {
   const { ruleId, fix } = req.body || {};
 
   if (!fix) {
@@ -31,9 +32,9 @@ router.post('/verify', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(400).json({
-      error: err.message || 'Verification could not be performed.',
+      error: 'The proposal could not be verified. Check the rule ID and snippet, then try again.',
     });
   }
-});
+}));
 
 export default router;
