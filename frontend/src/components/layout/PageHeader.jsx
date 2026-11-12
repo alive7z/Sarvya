@@ -5,7 +5,7 @@ export default function PageHeader({ title, description, icon: Icon, onNavigate,
     <header className="page-header">
       <div className="min-w-0 flex-1">
         <p className="mb-3 flex items-center gap-2 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-          AccessLens <ChevronRight size={12} aria-hidden="true" /> {category}
+          Sarvya <ChevronRight size={12} aria-hidden="true" /> {category}
         </p>
         <div className="flex items-start gap-3">
           {Icon && <span className="page-header-icon"><Icon size={21} strokeWidth={1.7} aria-hidden="true" /></span>}
