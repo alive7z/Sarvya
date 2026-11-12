@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
+import { useVision } from '../accessibility/VisionPreferences.jsx';
 
 export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
+  const { profile } = useVision();
   const previousSelector = useRef(selector);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
       if (selector && (selectionChanged || inspectTrigger)) {
         try {
           frame.contentWindow?.postMessage(
-            { type: 'ACCESSLENS_INSPECT', selector },
+            { type: 'SARVYA_INSPECT', selector },
             '*'
           );
         } catch {
@@ -39,7 +41,7 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
         element.classList.remove('broken', 'inspect-pulse');
       });
 
-      doc.getElementById('accesslens-highlight-styles')?.remove();
+      doc.getElementById('sarvya-highlight-styles')?.remove();
 
       if (!selector) return;
 
@@ -48,7 +50,7 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
         if (!elements.length) return;
 
         const style = doc.createElement('style');
-        style.id = 'accesslens-highlight-styles';
+        style.id = 'sarvya-highlight-styles';
         style.textContent = `
           .broken {
             outline: 4px solid #f97316 !important;
@@ -59,14 +61,19 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
               0 6px 24px rgba(249, 115, 22, 0.25) !important;
             transition: outline-color 0.25s ease, box-shadow 0.25s ease !important;
           }
-          @keyframes accesslens-inspect-glow {
+          @keyframes sarvya-inspect-glow {
             0% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.8); }
             50% { box-shadow: 0 0 0 16px rgba(249, 115, 22, 0); }
             100% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.8); }
           }
           .broken.inspect-pulse {
-            animation: accesslens-inspect-glow 1.2s ease-in-out infinite !important;
+            animation: sarvya-inspect-glow 1.2s ease-in-out infinite !important;
           }
+        `;
+        if (profile !== 'standard') style.textContent += `
+          .broken { outline: 4px dashed #111 !important; outline-offset: 4px !important;
+            box-shadow: 0 0 0 4px #fff, 0 0 0 9px #fff, 0 0 0 11px #111 !important; }
+          .broken.inspect-pulse { animation: none !important; }
         `;
         doc.head?.appendChild(style);
 
@@ -111,12 +118,12 @@ export default function IssueHighlight({ frameRef, selector, inspectTrigger }) {
         doc?.querySelectorAll('.broken').forEach((element) => {
           element.classList.remove('broken', 'inspect-pulse');
         });
-        doc?.getElementById('accesslens-highlight-styles')?.remove();
+        doc?.getElementById('sarvya-highlight-styles')?.remove();
       } catch {
         // Ignore
       }
     };
-  }, [frameRef, selector, inspectTrigger]);
+  }, [frameRef, selector, inspectTrigger, profile]);
 
   return null;
 }
