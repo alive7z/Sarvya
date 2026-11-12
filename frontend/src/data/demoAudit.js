@@ -160,7 +160,7 @@ export const demoHtml = `<!doctype html>
 </style>
 </head>
 <body>
-<div class="demo-strip">ACCESSLENS DEMO · FICTIONAL STORE · INTENTIONAL ACCESSIBILITY ISSUES</div>
+<div class="demo-strip">SARVYA DEMO · FICTIONAL STORE · INTENTIONAL ACCESSIBILITY ISSUES</div>
 <header class="nav">
 <a class="wordmark" href="#home" aria-label="Forma home">forma<span>.</span></a>
 <nav class="nav-links" aria-label="Store navigation"><a href="#collection">The collection</a><a href="#newsletter">Our journal</a></nav>
@@ -178,7 +178,7 @@ export const demoHtml = `<!doctype html>
 </section>
 <section class="newsletter" id="newsletter" aria-labelledby="newsletter-title"><div><h2 id="newsletter-title">Good ideas. In your inbox.</h2><span class="subtext">A little inspiration, once a month.</span></div><form id="demo-newsletter"><span class="form-label">Email address</span><div class="form-row"><input id="email" type="email" placeholder="you@example.com" required><button class="cta" type="submit">Join the list <span aria-hidden="true">↗</span></button></div><p class="form-note">Demo form. No email is sent or stored.</p><p class="form-status" id="form-status" role="status"></p></form></section>
 </main>
-<footer class="footer"><a class="wordmark" href="#home" aria-label="Forma home">forma<span>.</span></a><span>A fictional brand, made for the AccessLens demo.</span><a href="#collection">Back to the collection ↑</a></footer>
+<footer class="footer"><a class="wordmark" href="#home" aria-label="Forma home">forma<span>.</span></a><span>A fictional brand, made for the Sarvya demo.</span><a href="#collection">Back to the collection ↑</a></footer>
 <dialog id="demo-account" aria-labelledby="account-title"><h2 id="account-title">A place of your own.</h2><p>This is a demo account panel. No sign-in or personal information is required.</p><form method="dialog"><button class="cta">Close</button></form></dialog>
 <script>document.getElementById('demo-newsletter').addEventListener('submit',function(event){event.preventDefault();document.getElementById('form-status').textContent='Demo complete. No email was sent or stored.';});</script>
 </body>
