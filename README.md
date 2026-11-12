@@ -2,7 +2,7 @@
 
 # Sarvya
 
-A web accessibility auditor and fix suggester. Sarvya scans public websites with Chromium and axe-core, groups findings by rule and affected element, and provides a workspace for inspecting findings, reviewing proposed fixes, and exporting reports.
+A web accessibility auditing toolkit with a web workspace, a local npm CLI, and a Chrome/Edge extension. Sarvya scans public websites with Chromium and axe-core, groups findings by rule and affected element, and provides a workspace for inspecting findings, reviewing proposed fixes, and exporting reports.
 
 > Automated findings help identify accessibility barriers. They do not establish complete WCAG conformance or replace manual testing with assistive technologies.
 
@@ -12,6 +12,9 @@ A web accessibility auditor and fix suggester. Sarvya scans public websites with
 - [Technology and architecture](#technology-and-architecture)
 - [Local setup](#local-setup)
 - [Using the workspace](#using-the-workspace)
+- [npm CLI: installation and usage](#npm-cli-installation-and-usage)
+- [Browser extension: installation and usage](#browser-extension-installation-and-usage)
+- [Release packages](#release-packages)
 - [Configuration](#configuration)
 - [Scheduled monitoring](#scheduled-monitoring)
 - [GitHub OAuth setup](#github-oauth-setup)
@@ -34,13 +37,14 @@ A web accessibility auditor and fix suggester. Sarvya scans public websites with
 | Preview and inspection | A demo document and backend-served preview HTML with injected overlays; inspection depends on the target, captured document, and selector validity. |
 | Fix suggestions | Deterministic rule-based templates. No external AI provider is currently wired into fix generation. |
 | Fix verification | Browser-based axe-core checks on a constructed document. This verifies a limited snippet context, not a deployed website. |
-| History and comparison | Saved scan history and a frontend comparison workflow. No dedicated server-side comparison endpoint exists. |
+| History and comparison | Durable scan snapshots, finding-level baseline comparisons, and a server comparison endpoint at `GET /api/scans/:id/compare?baselineId=...`. |
 | Reports | Browser-side CSV/JSON downloads and an executive report/print dialog for PDF output. |
 | Reading and learning tools | A preview reader with play/pause/resume/stop, voice and speed controls, structural filters, a reading transcript, and current/proposed HTML reading. Includes a contrast calculator and color-vision learning tools. The reader uses browser speech and an approximate DOM outline, not NVDA/JAWS/VoiceOver output. |
-| Appearance | Light/dark modes, shared page headers, section navigation, responsive layouts, and reduced-motion support. |
+| Appearance | Light/dark themes, optional colour-vision onboarding and saved preferences, labelled severity icons, stronger contrast, patterned indicators, responsive layouts, and reduced-motion support. |
 | Monitoring | Real BullMQ daily/weekly schedules with local time/time zone, fixed or previous-run baselines, finding-level comparisons, history, and deduplicated in-app notifications. |
 | GitHub | Real OAuth login, writable repository selection, explicit finding-to-source mapping, patch diffs, per-patch approval, and draft PR creation. Requires OAuth App configuration. |
-| Browser extension / CLI | UI/documentation references exist, but runnable extension and CLI source packages are absent from the current checkout. |
+| npm CLI | Local Playwright/axe-core audits, JSON/HTML/CSV reports, configurable CI thresholds, timeouts, explicit browser installation, and reliable exit codes. Source and installable tarball are available; npm publication is pending. |
+| Browser extension | Manifest V3 Chrome/Edge extension with local active-tab audits, severity filtering, supported-element inspection, JSON export, and session-only results. Source and unpacked ZIP are available; store publication is pending. |
 
 ### Demo state
 
@@ -83,37 +87,31 @@ Express API (:3000)
 
 ```text
 Sarvya/
-├── AGENTS.md                   # Repository guidance and intended architecture
-├── README.md
-├── frontend/
-│   ├── src/
-│   │   ├── components/         # Layout, scans, issues, preview, reports, tools
-│   │   ├── hooks/              # Scan status hook
-│   │   ├── pages/              # AuditDashboard and utility-page composition
-│   │   ├── services/           # API client and service adapters
-│   │   └── index.css           # Shared typography, themes, and layout styles
-│   ├── package.json
-│   └── vite.config.js
+├── frontend/                 # React/Vite workspace and browser regression tests
 ├── backend/
-│   ├── src/
-│   │   ├── app.js              # Express entry point
-│   │   ├── routes/             # Scan, crawl, fix, monitor, GitHub, preview routes
-│   │   ├── services/           # Scanner, crawler, storage, verification, URL checks
-│   │   └── config/             # Shared environment configuration
-│   ├── data/                   # Runtime JSON storage; must be writable
-│   ├── migrations/             # Placeholder; no active database migrations
-│   ├── package.json
-│   └── Dockerfile
-└── docker-compose.yml         # API, worker, Redis and persistent volumes
+│   ├── src/routes/           # Scan, monitoring, fix, preview, and GitHub APIs
+│   ├── src/services/         # Persistence, comparison, browser safety, integrations
+│   ├── src/queues/           # Redis/BullMQ queue connections
+│   ├── src/workers/          # Separate scan and monitoring worker processes
+│   ├── tests/                # API, browser, queue, and production-startup tests
+│   └── .env.example          # Placeholder configuration; no private credentials
+├── cli/                      # sarvya-cli npm package; provides the sarvya command
+├── extension/                # Chrome/Edge Manifest V3 source and privacy disclosure
+├── scripts/                  # Packaging, validation, and production supervision
+├── docs/                     # Deployment guide and recorded validation results
+├── .github/workflows/ci.yml  # Automated checks and release artifact preparation
+├── Dockerfile                # Combined Render deployment image
+├── docker-compose.yml        # Separate API/worker/monitor/Redis services
+└── render.yaml               # Render service, private queue, and persistent disk
 ```
 
-Some directories are placeholders. Their presence does not mean the associated service has been implemented.
+Generated folders such as `node_modules/`, `frontend/dist/`, `extension/dist/`, and `release/` are excluded from Git. Build them locally or retrieve the release artifact generated by CI. Runtime scan data and credentials are also excluded.
 
 ## Local setup
 
 ### Prerequisites
 
-- Node.js 22 or newer and npm. This workspace has been built locally with Node.js 24.
+- Node.js 22.12 or newer and npm. This workspace has been built locally with Node.js 24.
 - Network access for installing packages, downloading Chromium, and scanning public sites.
 - Enough memory and disk space for Chromium.
 - A writable `backend/data/` directory for saved scans and monitor configuration.
@@ -122,10 +120,8 @@ Redis 7+ is required for scans. MySQL and an AI API key are not required. GitHub
 
 ### 1. Clone the repository
 
-Replace `YOUR_REPOSITORY_URL` with your repository or fork URL.
-
 ```bash
-git clone YOUR_REPOSITORY_URL Sarvya
+git clone https://github.com/alive7z/Sarvya.git Sarvya
 cd Sarvya
 ```
 
@@ -222,6 +218,193 @@ Use the speaker button in **Live preview** to open the reader. It reads the acce
 - The reading outline approximates DOM semantics. It does not implement the full accessible-name algorithm, native screen-reader behavior, braille, or a complete browser accessibility tree. CSS-dependent visibility can be inferred only for rendered preview documents; detached snippets have limited context.
 
 Voice availability, audible output, and pause/resume behavior depend on the browser and operating system. Test with actual assistive technology before treating a page as accessible.
+
+## npm CLI: installation and usage
+
+The **`sarvya-cli`** package provides the **`sarvya`** terminal command. It runs a single-page audit on your own machine using Playwright Chromium and axe-core. The CLI works independently of the web application: Redis, the backend API, a GitHub connection, and an AI API key are not required.
+
+**Distribution status:** npm publication is pending. Use the local package or source installation below. Uploading the repository to GitHub does not publish the package to npm.
+
+### Option A — install the prepared package
+
+From the repository root, after generating or obtaining the release files:
+
+```bash
+npm install --global ./release/sarvya-cli-0.1.0.tgz
+sarvya --install-browser
+sarvya --version
+sarvya --help
+```
+
+The tarball is a locally built artifact, not a file committed to the repository. To create it from a fresh checkout:
+
+```bash
+npm ci --prefix cli
+npm ci --prefix extension
+npm run release:pack
+```
+
+Packaging requires the `zip` utility. It is available on macOS and installed in the project's Docker builder. On other systems, install it using your operating system's package manager.
+
+### Option B — run from source
+
+```bash
+cd cli
+npm ci
+node bin/sarvya.js --install-browser
+node bin/sarvya.js https://example.com
+```
+
+To expose the command while developing the package, run `npm link` inside `cli/`, then use `sarvya` from your terminal.
+
+### Registry installation after publication
+
+Once the owner has published the package and confirmed registry name ownership:
+
+```bash
+npm install --global sarvya-cli
+sarvya --install-browser
+```
+
+Until publication, the registry command may return `E404`. Use Option A or B instead. Chromium installation is explicit; installing the npm package does not silently download a browser. Linux environments may additionally require Playwright's OS libraries; from `cli/`, use `npx playwright install --with-deps chromium` with appropriate system permissions.
+
+### Audit and reporting examples
+
+Run a public-site audit, or inspect a locally running development server:
+
+```bash
+sarvya https://example.com
+sarvya http://localhost:3000
+```
+
+The CLI requires a complete `http://` or `https://` address. The web workspace separately accepts bare domains and adds HTTPS automatically.
+
+Export the actual results in the format your workflow needs:
+
+```bash
+# Machine-readable findings, selectors, snippets, and manual-review information
+sarvya https://example.com --format json --output audit.json
+
+# Human-readable report; open audit.html in your browser
+sarvya https://example.com --format html --output audit.html
+
+# Spreadsheet-friendly report
+sarvya https://example.com --format csv --output audit.csv
+
+# Fail a CI job only for critical findings
+sarvya https://example.com --fail-on critical
+
+# Export evidence without failing because of detected findings
+sarvya https://example.com --format json --output audit.json --fail-on none
+```
+
+| Option | Purpose | Default |
+| --- | --- | --- |
+| `--format json\|html\|csv` | Select the report format. | `json` |
+| `--output <file>` | Write a report atomically to the chosen file. | Report to stdout |
+| `--fail-on <impact>` | Set the threshold: `minor`, `moderate`, `serious`, `critical`, or `none`. | `serious` |
+| `--timeout <milliseconds>` | Bound the audit after browser launch; accepts 1,000–300,000 ms. | `45000` |
+| `--install-browser` | Install the matching Chromium browser and exit. | Explicit action |
+| `--help` / `--version` | Display usage or package version. | — |
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | No finding reached the chosen failure threshold. |
+| `1` | One or more findings met or exceeded that threshold. |
+| `2` | Invalid arguments, navigation failure, missing browser, or another runtime error. |
+| `130` | The audit was interrupted. |
+
+JSON stdout contains report data; diagnostic messages go to stderr. HTML reports escape untrusted markup, and CSV output protects against common spreadsheet formula prefixes. Reports can contain sensitive page evidence: store and share them appropriately.
+
+Only audit pages you are authorised to test. Localhost is supported by the local CLI; the hosted scanner blocks private/internal destinations. This CLI does not provide multi-page crawling, monitoring, or automatic source changes. A successful automated check is not proof of WCAG conformance. See [the CLI README](cli/README.md) for package-specific details.
+
+## Browser extension: installation and usage
+
+The **Sarvya Accessibility Auditor** extension runs bundled axe-core on the active website in Chrome or Microsoft Edge. Audits start only when the user chooses **Scan current page**. A backend server, npm CLI installation, account, and API key are not required to use the built extension.
+
+**Distribution status:** the extension is available as an unpacked build and ZIP. Chrome Web Store and Edge Add-ons publication are pending; there is no store listing to install from yet.
+
+### Option A — load the extension ZIP
+
+1. Obtain `release/sarvya-extension.zip` from a local release build or the repository's CI release artifact.
+2. Extract the ZIP into a permanent folder. The extracted folder must contain `manifest.json`.
+3. Open `chrome://extensions` in Chrome or `edge://extensions` in Edge.
+4. Enable **Developer mode**.
+5. Select **Load unpacked** and choose the extracted folder containing `manifest.json`.
+6. Optionally pin Sarvya to the browser toolbar for convenient access.
+
+Do not select the ZIP itself or a parent directory that does not contain the manifest. Keep the extracted folder in place while the unpacked extension is installed.
+
+### Option B — build and load from source
+
+From the repository root:
+
+```bash
+npm ci --prefix extension
+npm run build:extension
+```
+
+Then follow the browser steps above, selecting **`extension/dist`** as the unpacked folder. The source directory `extension/` is not the complete loadable package: the build bundles axe-core and creates the required icons and assets.
+
+After rebuilding an installed unpacked extension, click its **Reload** button on the browser's extensions page. Refresh the target website before scanning again so stale injected scripts and selectors are cleared.
+
+### Audit workflow
+
+1. Open an authorised HTTP(S) website and click the Sarvya extension icon.
+2. Select **Scan current page** and wait for the actual audit to complete.
+3. Review violation occurrence counts, rule details, impact labels, and the number of rules needing manual review.
+4. Use **Filter by impact** to focus on critical, serious, moderate, or minor findings.
+5. Select **Inspect element** to locate a supported target. The extension scrolls to it and shows a removable dashed black-and-white highlight.
+6. Select **Download JSON report** to export the captured evidence, or **Clear results** to remove the stored results.
+
+If the popup closes during an audit, reopen it to check its stored state. If the page navigated or changed, scan again before relying on selectors. Frame/shadow-root targets and missing elements show an explanation when automatic inspection is unavailable.
+
+### Permissions, privacy, and limits
+
+| Permission | Why it is used |
+| --- | --- |
+| `activeTab` | Temporary access to the current page after an explicit user action. |
+| `scripting` | Run the locally bundled scanner and inspection overlay. |
+| `storage` | Retain audit state and findings in browser session storage. |
+
+The extension does not request blanket host permissions. It does not upload page data to Sarvya, an AI provider, or analytics services, and it does not download remotely hosted executable code. External rule-guidance links open only after the user selects them.
+
+Results include page URLs, titles, selectors, and limited HTML snippets, which may contain sensitive content. They stay in session storage until tab navigation, tab closure, browser restart, or **Clear results**. Downloaded reports remain on your device until you delete them. Up to 100 targets per rule are retained; full occurrence counts and truncation indicators remain visible. The temporary highlight closes after 15 seconds, scrolling/resizing, or its Close button.
+
+Browser settings pages, extension stores, some PDF viewers, protected content, and restricted frames cannot be audited. Automated findings and vision simulations do not certify accessibility. See [extension documentation](extension/README.md) and the [privacy disclosure](extension/PRIVACY.md).
+
+## Release packages
+
+Prepare both distributable packages from a fresh checkout:
+
+```bash
+npm ci --prefix backend
+npm ci --prefix frontend
+npm ci --prefix cli
+npm ci --prefix extension
+npm run release:check
+npm run release:pack
+npm --prefix frontend run build
+```
+
+| Generated file | Purpose |
+| --- | --- |
+| `release/sarvya-cli-0.1.0.tgz` | Installable npm CLI tarball. |
+| `release/sarvya-extension.zip` | Extractable Chrome/Edge extension build. |
+| `release/SHA256SUMS` | Integrity checksums for the generated archives. |
+| `extension/dist/` | Unpacked extension directory for local browser installation. |
+| `frontend/public/downloads/sarvya-extension.zip` | Extension download copied into the web application's production build. |
+
+On systems with `shasum`, verify archive integrity from the `release/` directory:
+
+```bash
+cd release
+shasum -a 256 -c SHA256SUMS
+```
+
+`npm run build` at the repository root packages the CLI and extension before building the frontend. The CI workflow also validates the project and prepares a downloadable `sarvya-release` artifact. CI artifacts are produced only after the workflow succeeds; generated archives are excluded from Git and are not automatically attached to a GitHub Release.
+
+Package preparation does not publish to npm or either browser store. Publishing requires the owner's registry/developer account, ownership checks, accurate privacy/support declarations, and the relevant approval process. The project remains **UNLICENSED**. Deployment, backup, and hosting details are covered in [the deployment guide](docs/DEPLOYMENT.md).
 
 ## Configuration
 
@@ -506,7 +689,19 @@ cd frontend
 npm run test:reader
 ```
 
-The suite starts an isolated Vite server and reuses the backend's installed Playwright. It checks content extraction and reader interactions with a controlled speech service; it does not verify audible output from system voices. There are no general lint/type-check scripts or comprehensive application-wide test suite yet.
+The suite starts an isolated Vite server and reuses the backend's installed Playwright. It checks content extraction and reader interactions with a controlled speech service; it does not verify audible output from system voices. There are no dedicated lint/type-check scripts. Backend, frontend browser, CLI, and extension regression suites are available; see the commands below.
+
+From the repository root, run the full suite after installing dependencies, Chromium, and a local Redis instance:
+
+```bash
+REDIS_TEST_URL=redis://127.0.0.1:6379 BROWSER_TESTS=1 npm test
+```
+
+To verify the distributable npm artifact in a clean temporary installation, first generate release packages, then run:
+
+```bash
+node scripts/smoke-package.mjs
+```
 
 Useful manual checks include:
 
