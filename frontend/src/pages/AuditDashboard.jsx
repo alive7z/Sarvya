@@ -1,3 +1,5 @@
+import DocumentationGuide from '../components/education/DocumentationGuide.jsx';
+import { normalizeWebsiteUrl } from '../utils/websiteUrl.js';
 import { demoIssues, demoHtml, DEMO_HOST } from '../data/demoAudit.js';
 import PageHeader, { PageSections } from '../components/layout/PageHeader.jsx';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +19,8 @@ import ExtensionHub from '../components/extension/ExtensionHub.jsx';
 import ExecutiveReportModal from '../components/reports/ExecutiveReportModal.jsx';
 import {
   createScan,
+  cancelScan,
+  ACTIVE_SCAN_STATES,
   listScans,
   verifyFixApi,
   generateFixApi,
@@ -92,11 +96,19 @@ export default function AuditDashboard() {
   const [expanded, setExpanded] = useState('image-alt');
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('All severities');
-  const [page, setPage] = useState('workspace');
+  const [page, setPage] = useState(() => new URLSearchParams(window.location.search).has('github') || window.location.hash.startsWith('#github') ? 'github' : 'workspace');
   const [url, setUrl] = useState('');
+  useEffect(() => {
+    const current = new URL(window.location.href);
+    if (page === 'github' && !current.hash.startsWith('#github')) current.hash = 'github';
+    else if (page !== 'github' && current.hash.startsWith('#github')) current.hash = '';
+    window.history.replaceState(null, '', current);
+  }, [page]);
   const [scanId, setScanId] = useState('');
   const [scanState, setScanState] = useState('idle');
   const [scanError, setScanError] = useState('');
+  const [cancelPending, setCancelPending] = useState(false);
+  const loadedResult = useRef(null);
   const [demo, setDemo] = useState(true);
   const [theme, setTheme] = useState('light');
   const [mobileTab, setMobileTab] = useState('issues');
@@ -185,21 +197,25 @@ export default function AuditDashboard() {
 
   useEffect(() => {
     if (!scanResult) return;
-
-    setScanState(scanResult.status || 'processing');
-
-    if (scanResult.issues) {
-      setIssues(scanResult.issues);
-      setActiveId(scanResult.issues[0]?.id || '');
+    setScanState(scanResult.status);
+    setScanError(scanResult.error || '');
+    if (scanResult.status === 'completed' && loadedResult.current !== scanResult.scanId) {
+      loadedResult.current = scanResult.scanId;
+      const findings = scanResult.issues || [];
+      setIssues(findings); setActiveId(findings[0]?.id || ''); setExpanded(findings[0]?.id || '');
+      setToast(`Scan completed: ${findings.length} violation type(s) across ${scanResult.pagesScanned} page(s).`);
     }
   }, [scanResult]);
 
-  useEffect(() => {
-    if (statusError) {
-      setScanState('failed');
-      setScanError(statusError);
-    }
-  }, [statusError]);
+  useEffect(() => { if (statusError) setScanError(statusError); }, [statusError]);
+
+  async function handleCancelScan() {
+    if (!scanId || cancelPending) return;
+    setCancelPending(true);
+    try { const run = await cancelScan(scanId); setScanState(run.status); setScanError(''); }
+    catch (error) { setScanError(error.userMessage || error.message || 'Could not request cancellation.'); }
+    finally { setCancelPending(false); }
+  }
 
   async function startScan(event) {
     event?.preventDefault();
@@ -209,20 +225,14 @@ export default function AuditDashboard() {
     let normalized;
 
     try {
-      normalized = new URL(
-        url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`
-      ).toString();
-
-      if (!['http:', 'https:'].includes(new URL(normalized).protocol)) {
-        throw new Error();
-      }
-    } catch {
-      setScanError('Enter a valid website URL, including https://');
+      normalized = normalizeWebsiteUrl(url);
+    } catch (error) {
+      setScanError(error.message);
       return;
     }
 
     setUrl(normalized);
-    setScanState('scanning');
+    setScanState('submitting');
     setDemo(false);
     setIssues([]);
     setActiveId('');
@@ -232,29 +242,8 @@ export default function AuditDashboard() {
     try {
       const scan = await createScan(normalized);
 
-      const realIssues = Array.isArray(scan.issues) ? scan.issues : [];
-
-      setIssues(realIssues);
-      setActiveId(realIssues[0]?.id || '');
-      setExpanded(realIssues[0]?.id || '');
-      setScanId(scan.scanId || '');
-      setScanState('completed');
-
-      if (scan.pagesScanned === 0 && scan.pagesFailed > 0) {
-        setScanState('failed');
-        setScanError('The scan could not successfully audit any pages.');
-        return;
-      }
-
-      if (realIssues.length === 0) {
-        setToast(
-          `Scan completed: ${scan.pagesScanned} page(s) scanned, with no automated violations detected!`
-        );
-      } else {
-        setToast(
-          `Scan completed: ${realIssues.length} violation type(s) found across ${scan.pagesScanned} scanned page(s).`
-        );
-      }
+      setScanId(scan.scanId);
+      setScanState(scan.status);
     } catch (error) {
       setScanState('failed');
       setIssues([]);
@@ -277,13 +266,9 @@ export default function AuditDashboard() {
     }
     let normalized;
     try {
-      normalized = new URL(
-        target.startsWith('http') ? target : `https://${target}`
-      ).toString();
-      if (!['http:', 'https:'].includes(new URL(normalized).protocol))
-        throw new Error();
-    } catch {
-      setScanError('Enter a valid website URL, including https://');
+      normalized = normalizeWebsiteUrl(target);
+    } catch (error) {
+      setScanError(error.message);
       setShowCrawl(false);
       return;
     }
@@ -291,29 +276,22 @@ export default function AuditDashboard() {
     setUrl(normalized);
     setShowCrawl(false);
     setScanError('');
-    setScanState('scanning');
+    setScanState('submitting');
     setDemo(false);
     setIssues([]);
     setActiveId('');
     setExpanded('');
-    setToast(`Crawling & scanning up to ${options.maxPages || 5} pages…`);
+    setScanId('');
+    setToast(`Submitting an audit of up to ${options.maxPages || 5} pages…`);
 
     try {
       const scan = await createScan(normalized, {
         maxPages: options.maxPages || 5,
-        maxDepth: options.maxDepth || 1,
+        maxDepth: options.maxDepth ?? 1,
       });
 
-      const realIssues = Array.isArray(scan.issues) ? scan.issues : [];
-      setIssues(realIssues);
-      setActiveId(realIssues[0]?.id || '');
-      setExpanded(realIssues[0]?.id || '');
-      setScanId(scan.scanId || '');
-      setScanState('completed');
-
-      setToast(
-        `Multi-page crawl & audit complete: ${scan.pagesScanned} page(s) audited, ${realIssues.length} issue(s) detected.`
-      );
+      setScanId(scan.scanId);
+      setScanState(scan.status);
     } catch (error) {
       setScanState('failed');
       setScanError(
@@ -365,7 +343,7 @@ export default function AuditDashboard() {
       try {
         iframe.current.contentWindow.postMessage(
           {
-            type: 'ACCESSLENS_INSPECT',
+            type: 'SARVYA_INSPECT',
             selector,
             rule,
           },
@@ -388,7 +366,9 @@ export default function AuditDashboard() {
     setActiveId(pastScan.issues?.[0]?.id || '');
     setExpanded(pastScan.issues?.[0]?.id || '');
     setDemo(false);
-    setScanState('completed');
+    setScanState(pastScan.status || 'completed');
+    setScanError(pastScan.error || '');
+    loadedResult.current = pastScan.status === 'completed' ? pastScan.scanId : null;
     setPage('workspace');
     setToast(`Loaded scan for ${pastScan.startUrl}`);
   }
@@ -455,7 +435,7 @@ export default function AuditDashboard() {
 
     const link = document.createElement('a');
     link.href = objectUrl;
-    link.download = `accesslens-audit-${Date.now()}.csv`;
+    link.download = `sarvya-audit-${Date.now()}.csv`;
     link.click();
 
     URL.revokeObjectURL(objectUrl);
@@ -484,7 +464,7 @@ export default function AuditDashboard() {
 
     const link = document.createElement('a');
     link.href = objectUrl;
-    link.download = `accesslens-report-${Date.now()}.json`;
+    link.download = `sarvya-report-${Date.now()}.json`;
     link.click();
 
     URL.revokeObjectURL(objectUrl);
@@ -515,6 +495,7 @@ export default function AuditDashboard() {
               {demo ? (
                 <button
                   type="button"
+                  disabled={ACTIVE_SCAN_STATES.includes(scanState)}
                   onClick={() => {
                     setUrl('');
                     setIssues([]);
@@ -530,6 +511,7 @@ export default function AuditDashboard() {
               ) : (
                 <button
                   type="button"
+                  disabled={ACTIVE_SCAN_STATES.includes(scanState)}
                   onClick={() => {
                     setUrl('');
                     setIssues(demoIssues);
@@ -547,7 +529,7 @@ export default function AuditDashboard() {
               <div className="inline-flex w-fit shrink-0 items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-[11px] font-semibold text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
                 <Clock3 size={16} className="text-accent-500" />
                 <span>
-                  {scanState === 'completed' ? 'Just scanned' : 'Ready to scan'}
+                  {scanState === 'completed' ? 'Scan completed' : ACTIVE_SCAN_STATES.includes(scanState) ? 'Scan in progress' : scanState === 'cancelled' ? 'Scan cancelled' : scanState === 'failed' ? 'Scan failed' : 'Ready to scan'}
                 </span>
               </div>
 
@@ -555,12 +537,12 @@ export default function AuditDashboard() {
                 <button
                   type="button"
                   onClick={startScan}
-                  disabled={['queued', 'processing', 'scanning'].includes(scanState)}
+                  disabled={ACTIVE_SCAN_STATES.includes(scanState)}
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 text-[11px] font-bold text-accent-600 shadow-sm transition-all hover:bg-accent-100 active:scale-95 disabled:opacity-60 dark:border-accent-900/50 dark:bg-accent-500/10 dark:text-accent-400"
                 >
                   <RefreshCw
                     size={14}
-                    className={['queued', 'processing', 'scanning'].includes(scanState) ? 'animate-spin' : ''}
+                    className={ACTIVE_SCAN_STATES.includes(scanState) ? 'animate-spin' : ''}
                   />
                   Rescan site
                 </button>
@@ -576,9 +558,15 @@ export default function AuditDashboard() {
               onUrlChange={setUrl}
               onSubmit={startScan}
               onCrawl={() => setShowCrawl(true)}
-              busy={['queued', 'processing', 'scanning'].includes(scanState)}
+              busy={ACTIVE_SCAN_STATES.includes(scanState)}
               demo={demo}
               state={scanState}
+              progress={scanResult?.progress}
+              stage={scanResult?.stage}
+              attempt={scanResult?.attempt}
+              maxAttempts={scanResult?.maxAttempts}
+              onCancel={scanId ? handleCancelScan : undefined}
+              cancelPending={cancelPending || scanState === 'cancelling'}
               error={scanError}
             />
           </div>
@@ -664,6 +652,8 @@ export default function AuditDashboard() {
               />
 
               <WebsitePreview
+                capturedHtml={scanResult?.results?.find(result => result.url === url)?.html || scanResult?.results?.find(result => result.status === 'success')?.html}
+                scanState={scanState}
                 className={mobileTab === 'issues' ? 'hidden md:flex' : ''}
                 iframeRef={iframe}
                 srcDoc={demoHtml}
@@ -700,7 +690,7 @@ export default function AuditDashboard() {
 
           <footer className="mt-9 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-[11px] text-zinc-400 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:text-zinc-500">
             <span className="flex items-center gap-2 font-bold tracking-[0.04em]">
-              ACCESSLENS
+              SARVYA
               <span className="h-1 w-1 rounded-full bg-accent-500" />
               BUILT FOR A MORE ACCESSIBLE WEB
             </span>
@@ -830,7 +820,7 @@ function HistoryView({ onLoadScan, onToast }) {
             Previous audit scans
           </h2>
           <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
-            Persisted history from your AccessLens scans and crawls.
+            Persisted history from your Sarvya scans and crawls.
           </p>
         </div>
 
@@ -891,9 +881,9 @@ function HistoryView({ onLoadScan, onToast }) {
                         ).toLocaleString()}
                       </span>
                       <span>•</span>
-                      <span>{scan.pagesScanned || 1} page(s) audited</span>
+                      <span>{scan.pagesScanned ?? 0} page(s) audited</span>
                       <span>•</span>
-                      <span>{issuesCount} violation types detected</span>
+                      <span>{!scan.status || scan.status === 'completed' ? `${issuesCount} violation types detected` : `${scan.status} · results pending`}</span>
                     </div>
                   </div>
 
@@ -903,7 +893,7 @@ function HistoryView({ onLoadScan, onToast }) {
                       onClick={() => onLoadScan(scan)}
                       className="inline-flex min-h-[38px] items-center gap-2 rounded-xl bg-zinc-900 px-4 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-zinc-800 dark:bg-accent-600 dark:hover:bg-accent-500"
                     >
-                      Load into workspace
+                      {ACTIVE_SCAN_STATES.includes(scan.status) ? 'View progress' : 'Load into workspace'}
                     </button>
                   </div>
                 </div>
@@ -959,7 +949,7 @@ function AppPage({
       'Review proposed source changes and open pull requests with approval.',
     reports:
       'Export findings and remediation details for your team in CSV and JSON formats.',
-    docs: 'Learn how to use AccessLens and understand audit results.',
+    docs: 'Learn how to use Sarvya and understand audit results.',
     settings: 'Manage your workspace preferences and API connection.',
   };
 
@@ -979,7 +969,7 @@ function AppPage({
   }
 
   if (page === 'monitoring') {
-    return <MonitoringPanel onNavigate={onNavigate} />;
+    return <MonitoringPanel onNavigate={onNavigate} onLoadScan={onLoadScan} />;
   }
 
   if (page === 'github') {
@@ -998,7 +988,7 @@ function AppPage({
       <PageSections items={{
         history: [['scan-history', 'Saved scans']],
         reports: [['report-exports', 'Export results'], ['report-fields', 'Report contents']],
-        docs: [['quick-start', 'Getting started'], ['audit-workflow', 'Audit workflow'], ['developer-cli', 'Developer CLI'], ['api-reference', 'API reference']],
+        docs: [['quick-start', 'Getting started'], ['audit-workflow', 'Workflow'], ['understand-results', 'Understanding results'], ['next-steps-guide', 'Next steps'], ['api-reference', 'API reference']],
         settings: [['appearance', 'Appearance'], ['api-connection', 'API connection'], ['scan-guidance', 'Scan guidance']],
       }[page] || []} />
 
@@ -1137,130 +1127,7 @@ function AppPage({
         </div>
       )}
 
-      {page === 'docs' && (
-        <div className="page-docs-grid">
-          <section id="quick-start" className={`${cardStyle} p-7 sm:p-9`}>
-            <Badge tone="orange">QUICK GUIDE</Badge>
-
-            <h2 className="mt-6 text-[25px] font-extrabold tracking-[-0.8px] text-zinc-900 dark:text-zinc-100">
-              Make your first audit useful
-            </h2>
-
-            <p className="mt-3 max-w-[720px] text-[13px] leading-[1.9] text-zinc-500 dark:text-zinc-400">
-              AccessLens combines automated checks with an element-level review
-              workflow. Treat every result as a finding to investigate, not a
-              compliance verdict.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => onNavigate('workspace')}
-              className={`${primaryButton} mt-6`}
-            >
-              Open workspace
-              <ArrowUpRight size={16} />
-            </button>
-          </section>
-
-          <div id="audit-workflow" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                number: '01',
-                title: 'Run a scan',
-                description:
-                  'Enter a target URL and choose single-page audit or multi-page crawling to analyze your site.',
-              },
-              {
-                number: '02',
-                title: 'Inspect elements',
-                description:
-                  'Select any detected issue in the findings panel to highlight the element in the preview.',
-              },
-              {
-                number: '03',
-                title: 'Review suggested fixes',
-                description:
-                  'Examine concrete code fixes generated for alt attributes, color contrast, forms, and ARIA names.',
-              },
-              {
-                number: '04',
-                title: 'Verify proposed changes',
-                description:
-                  'Click Verify to run axe-core validation on the proposed snippet and ensure the issue is resolved.',
-              },
-            ].map(({ number, title, description }) => (
-              <section key={number} className={`${cardStyle} p-6 sm:p-7`}>
-                <span className="font-mono text-[12px] font-bold text-accent-500">
-                  {number}
-                </span>
-
-                <h3 className="mt-3 text-[16px] font-bold text-zinc-900 dark:text-zinc-100">
-                  {title}
-                </h3>
-
-                <p className="mt-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  {description}
-                </p>
-              </section>
-            ))}
-          </div>
-
-          <section id="developer-cli" className={`${cardStyle} p-6 sm:p-8`}>
-            <Badge tone="orange">DEVELOPER CLI & NPM</Badge>
-            <h2 className="mt-3 text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-              AccessLens Command Line Interface (`accesslens`)
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Run automated WCAG audits in your terminal, audit local dev servers, and gate CI/CD pull requests.
-            </p>
-
-            <div className="mt-4 space-y-3 font-mono text-[11px]">
-              <div className="rounded-xl border border-zinc-200 bg-zinc-900 p-4 text-emerald-400 dark:border-zinc-700">
-                <span className="text-zinc-500 select-none"># 1. Run directly on any site with npx:</span><br />
-                npx accesslens https://example.com<br /><br />
-                <span className="text-zinc-500 select-none"># 2. Audit local dev server:</span><br />
-                npx accesslens http://localhost:3000<br /><br />
-                <span className="text-zinc-500 select-none"># 3. Export executive HTML report and view in browser:</span><br />
-                npx accesslens https://example.com --format html --output report.html --view<br /><br />
-                <span className="text-zinc-500 select-none"># 4. CI/CD Gate (exit code 1 if critical barriers found):</span><br />
-                npx accesslens https://myapp.dev --fail-on critical
-              </div>
-            </div>
-          </section>
-
-          <section id="api-reference" className={`${cardStyle} p-6 sm:p-8`}>
-            <h2 className="text-[17px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Available API endpoints
-            </h2>
-
-            <div className="mt-6 divide-y divide-zinc-100 dark:divide-zinc-800">
-              {[
-                ['POST /api/scan', 'Run an accessibility scan on a URL or page set'],
-                ['POST /api/crawl', 'Discover internal links on the same origin'],
-                ['GET /api/scans', 'List all historical scan runs'],
-                ['POST /api/fixes/generate', 'Generate an accessible code proposal'],
-                ['POST /api/fixes/verify', 'Verify code snippet with Chromium axe-core'],
-                ['GET /api/monitors', 'List recurring monitoring schedules'],
-                ['GET /api/github/repos', 'List connected GitHub repositories'],
-                ['GET /api/health', 'Check API status and uptime'],
-              ].map(([endpoint, description]) => (
-                <div
-                  key={endpoint}
-                  className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <code className="w-fit rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-[11px] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                    {endpoint}
-                  </code>
-
-                  <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                    {description}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
+      {page === 'docs' && <DocumentationGuide onNavigate={onNavigate} />}
 
       {page === 'settings' && (
         <div className="page-settings-grid">
