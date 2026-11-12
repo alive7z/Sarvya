@@ -4,7 +4,9 @@ permissions:
   contents: read
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # Newer Ubuntu images restrict the user namespaces required by Chromium's sandbox.
+    # Pin this supported image; never disable the application's browser sandbox.
+    runs-on: ubuntu-22.04
     timeout-minutes: 25
     services:
       redis:
@@ -32,6 +34,19 @@ jobs:
       - run: npm ci --prefix backend && npm ci --prefix frontend && npm ci --prefix cli && npm ci --prefix extension
       - run: npx playwright install --with-deps chromium
         working-directory: backend
+      - name: Verify Chromium sandbox
+        working-directory: backend
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          let browser;
+          try {
+            browser = await chromium.launch({ headless: true, chromiumSandbox: true, timeout: 20000 });
+            console.log('Chromium sandbox is available.');
+          } finally {
+            await browser?.close();
+          }
+          NODE
       - run: |
           python -m pip install PyYAML jsonschema
           curl --fail --max-time 30 https://render.com/schema/render.yaml.json -o /tmp/render-schema.json
