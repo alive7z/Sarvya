@@ -55,7 +55,7 @@ export default function SummaryCards({ issues = [], scanState = 'idle', scoreFro
         score === null
           ? 'Run an audit to calculate'
           : (isCompleted && !hasIssues
-              ? 'Flawless score · 0 automated violations'
+              ? 'Project estimate · 0 automated violations'
               : 'Project estimate · automated checks only'),
       icon: Activity,
       iconColor: isCompleted && !hasIssues ? 'text-emerald-500' : 'text-accent-600 dark:text-accent-400',
@@ -66,7 +66,7 @@ export default function SummaryCards({ issues = [], scanState = 'idle', scoreFro
       label: 'Total Issues',
       value: isCompleted ? total : (hasIssues ? total : '—'),
       description: isCompleted
-        ? (!hasIssues ? 'Zero accessibility barriers detected' : `${total} occurrences across ${issues.length} rules`)
+        ? (!hasIssues ? 'No automated violations detected' : `${total} occurrences across ${issues.length} rules`)
         : (hasIssues ? `${total} occurrences across ${issues.length} rules` : 'Awaiting first scan'),
       icon: AlertTriangle,
       iconColor: isCompleted && !hasIssues ? 'text-emerald-600' : 'text-orange-600 dark:text-amber-400',
@@ -76,7 +76,7 @@ export default function SummaryCards({ issues = [], scanState = 'idle', scoreFro
       label: 'Critical Issues',
       value: isCompleted ? critical : (hasIssues ? critical : '—'),
       description: isCompleted
-        ? (!hasIssues ? 'All critical criteria satisfied' : (critical > 0 ? 'Require immediate attention' : 'None detected'))
+        ? (!hasIssues ? 'None detected by automated checks' : (critical > 0 ? 'Require immediate attention' : 'None detected'))
         : (hasIssues ? 'Require immediate attention' : 'Awaiting first scan'),
       icon: AlertTriangle,
       iconColor: critical > 0 ? 'text-red-600 dark:text-rose-400' : (isCompleted && !hasIssues ? 'text-emerald-600' : 'text-zinc-400'),
@@ -84,9 +84,9 @@ export default function SummaryCards({ issues = [], scanState = 'idle', scoreFro
     },
     {
       label: 'Verified Fixes',
-      value: isCompleted ? (!hasIssues ? '100%' : `${verified}`) : (hasIssues ? verified : '—'),
+      value: isCompleted ? `${verified}` : (hasIssues ? verified : '—'),
       suffix: isCompleted && hasIssues ? `/ ${total}` : '',
-      description: isCompleted && !hasIssues ? 'All criteria clean' : 'Verification requires an actual recheck',
+      description: 'Verification requires an actual recheck',
       icon: ShieldCheck,
       iconColor: 'text-emerald-600',
       iconBackground: 'bg-emerald-50 dark:bg-emerald-500/10',
