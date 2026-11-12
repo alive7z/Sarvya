@@ -1,0 +1,17 @@
+{
+  "name": "sarvya-release",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "node scripts/package-release.mjs && npm --prefix frontend run build",
+    "build:extension": "node scripts/build-extension.mjs",
+    "test": "npm --prefix backend test && npm --prefix cli test && node --test extension/tests/*.test.mjs && npm --prefix frontend run test:all",
+    "release:check": "node scripts/check-release.mjs",
+    "release:pack": "node scripts/package-release.mjs",
+    "start:render": "node scripts/start-render.mjs"
+  },
+  "license": "UNLICENSED"
+}
