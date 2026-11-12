@@ -5,3 +5,11 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Shared runtime scan artifacts and local monitoring data
+backend/data/
+
+# Locally prepared release archives and copied download artifacts
+release/
+frontend/public/downloads/
+*.tgz
