@@ -194,7 +194,7 @@ Do not create empty folders solely to match this drawing. Add files when needed 
 
 Include:
 
-- Product logo/name (working title: AccessLens; change only if project branding says otherwise).
+- Product logo/name (working title: Sarvya; change only if project branding says otherwise).
 - URL input.
 - `Scan Website` action.
 - `Scan All Pages` action.
