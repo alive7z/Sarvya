@@ -1,0 +1,46 @@
+name: Release checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REDIS_TEST_URL: redis://127.0.0.1:6379
+      BROWSER_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            cli/package-lock.json
+            extension/package-lock.json
+      - run: npm ci --prefix backend && npm ci --prefix frontend && npm ci --prefix cli && npm ci --prefix extension
+      - run: npx playwright install --with-deps chromium
+        working-directory: backend
+      - run: |
+          python -m pip install PyYAML jsonschema
+          curl --fail --max-time 30 https://render.com/schema/render.yaml.json -o /tmp/render-schema.json
+          python scripts/validate-render.py /tmp/render-schema.json
+      - run: npm run release:pack && npm --prefix frontend run build
+      - run: npm run release:check && npm test
+      - run: npm run release:pack && node scripts/smoke-package.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sarvya-release
+          path: release/
+      - run: docker build -t sarvya-release .
