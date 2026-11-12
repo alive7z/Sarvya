@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Speech synthesis is shared by the page: only one AccessLens reader owns it.
+// Speech synthesis is shared by the page: only one Sarvya reader owns it.
 let speechOwner = null;
 
 export default function useSpeechReader(items, language = '') {
