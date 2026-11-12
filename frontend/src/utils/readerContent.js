@@ -73,7 +73,7 @@ export function collectReadingItems(document, { maxItems = 500, maxCharacters = 
     }
     if (node.nodeType !== 1) return;
     const el = node;
-    if (el.matches('script, style, noscript, template, [hidden], [inert], [aria-hidden="true"], input[type="hidden"], #accesslens-overlay-script, [id^="accesslens-marker"], [id^="accesslens-tooltip"]')) return;
+    if (el.matches('script, style, noscript, template, [hidden], [inert], [aria-hidden="true"], input[type="hidden"], #sarvya-overlay-script, [id^="sarvya-marker"], [id^="sarvya-tooltip"]')) return;
     if (el.style.display === 'none' || ['hidden', 'collapse'].includes(el.style.visibility)) return;
     const style = document.defaultView?.getComputedStyle(el);
     if (style && (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse')) return;
