@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Sarvya page audit</title><link rel="stylesheet" href="popup.css"></head><body>
+<header><strong>Sar<span>vya</span></strong><small>LOCAL PAGE AUDITOR</small></header>
+<main><h1>Audit this page</h1><p>Check the current page for accessibility barriers. Nothing is uploaded.</p>
+<div class="actions"><button id="scan" type="button">Scan current page</button><button id="clear" type="button" class="secondary">Clear results</button></div>
+<p id="status" role="status" aria-live="polite">Ready to scan.</p><p id="error" role="alert" hidden></p>
+<section id="summary" aria-label="Audit summary" hidden></section>
+<label for="severity">Filter by impact</label><select id="severity"><option value="all">All impacts</option><option>critical</option><option>serious</option><option>moderate</option><option>minor</option></select>
+<div id="findings"></div><button id="export" type="button" class="secondary" disabled>Download JSON report</button>
+<p class="note">Automated checks do not prove WCAG conformance. Manual review is required. Only scan sites you are authorised to inspect.</p></main><script src="popup.js" type="module"></script></body></html>
