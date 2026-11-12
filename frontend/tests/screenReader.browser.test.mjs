@@ -31,7 +31,7 @@ after(async () => { await browser?.close(); await server?.close(); });
 beforeEach(async () => {
   context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   await context.addInitScript(mockSpeech);
-  page = await context.newPage();
+  await context.addInitScript(() => localStorage.setItem('sarvya-vision-v1', 'standard')); page = await context.newPage();
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
   await page.goto(baseURL);
   await page.getByRole('button', { name: 'Open screen reader', exact: true }).waitFor();
@@ -139,6 +139,7 @@ const wait = async fn => page.waitForFunction(fn);
   const reader = readerPanel();
   await reader.getByText('Speech is unavailable in this browser. The reading outline is still available.', { exact: true }).waitFor();
   assert.equal(await reader.getByRole('button', { name: 'Read aloud', exact: true }).isDisabled(), true);
+  await reader.getByRole('list', { name: 'Reading transcript' }).getByRole('button').first().waitFor();
   assert.ok(await reader.getByRole('list', { name: 'Reading transcript' }).getByRole('button').count() > 0);
  });
 
@@ -174,6 +175,7 @@ const wait = async fn => page.waitForFunction(fn);
   await reader.getByText('This browser has not exposed any Google voices. Audio is unavailable; the transcript remains readable.', { exact: true }).waitFor();
   assert.equal(await reader.getByRole('button', { name: 'Read aloud', exact: true }).isDisabled(), true);
   assert.equal(await page.evaluate(() => window.__speech.calls.length), 0);
+  await reader.getByRole('list', { name: 'Reading transcript' }).getByRole('button').first().waitFor();
   assert.ok(await reader.getByRole('list', { name: 'Reading transcript' }).getByRole('button').count() > 0);
  });
 
