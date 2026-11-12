@@ -1,0 +1,43 @@
+# One protected workspace; persistent disks cannot be shared across Render services.
+services:
+  - type: web
+    name: sarvya
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: 2c-4g
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/health
+    disk:
+      name: sarvya-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /app/data
+      - key: STATIC_DIR
+        value: /app/frontend
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sarvya-queue
+          property: connectionString
+      - key: ACCESS_USER
+        sync: false
+      - key: ACCESS_PASSWORD
+        sync: false
+      - key: SCAN_WORKER_CONCURRENCY
+        value: 1
+      - key: SCAN_GLOBAL_CONCURRENCY
+        value: 1
+      - key: SCAN_MAX_PENDING_JOBS
+        value: 50
+  - type: keyvalue
+    name: sarvya-queue
+    plan: 256mb
+    maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
+    ipAllowList: []
