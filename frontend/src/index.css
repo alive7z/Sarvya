@@ -274,6 +274,7 @@ input[type='radio'] {
 }
 
 button:focus-visible,
+summary:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
