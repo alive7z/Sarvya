@@ -8,9 +8,10 @@ export function normalizeUrl(rawUrl) {
   }
 
   const trimmed = rawUrl.trim();
+  if ((/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || /^(file|data|javascript|ftp):/i.test(trimmed)) && !/^https?:\/\//i.test(trimmed)) throw new Error('Only HTTP and HTTPS URLs are allowed.');
   let url;
   try {
-    url = new URL(trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`);
+    url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
   } catch {
     throw new Error('Invalid URL format. Please include http:// or https://');
   }
