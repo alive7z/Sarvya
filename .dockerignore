@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.git
+backend/data
+backend-backup
+release
+frontend/public/downloads
+**/*.log
+
+**/.npmrc
+**/*.pem
+**/*.key
