@@ -1,3 +1,8 @@
+import { createPublicProxy, browserEnvironment } from './publicNetwork.js';
+import { protectBrowserContext } from './browserNetworkGuard.js';
+import { env } from '../config/env.js';
+import { assertPublicUrl } from './urlValidator.js';
+import { RunError, isTransient, publicError } from './runErrors.js';
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { generateFix } from './fixService.js';
@@ -33,25 +38,16 @@ function getWcagCriterion(ruleId) {
   return map[ruleId] || 'WCAG 2.1';
 }
 
-export async function scanPages(pages) {
+export async function scanPages(pages, { signal, onProgress = async () => {}, validateUrl = assertPublicUrl, launchBrowser = (options) => chromium.launch(options), proxyFactory = createPublicProxy } = {}) {
   const pageList = Array.isArray(pages) ? pages : [pages];
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
-      '--disable-extensions',
-      '--disable-background-networking',
-      '--disable-default-apps',
-      '--disable-sync',
-      '--mute-audio',
-    ],
-  });
+  signal?.throwIfAborted();
+  const proxy = await proxyFactory();
+  let browser;
+  try { browser = await launchBrowser({ headless: true, env: browserEnvironment(), timeout: env.navigationTimeoutMs, chromiumSandbox: true, proxy: { server: proxy.server, bypass: '<-loopback>' }, args: ['--disable-dev-shm-usage', '--disable-background-networking', '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'] }); }
+  catch (error) { await proxy.close(); throw error; }
+  const abort = () => { browser.close().catch(() => {}); };
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) abort();
   const results = [];
   let primaryPreview = null;
 
@@ -61,42 +57,32 @@ export async function scanPages(pages) {
       let context;
 
       try {
+        signal?.throwIfAborted();
+        try { await validateUrl(targetUrl); } catch { throw new RunError('A target address is unavailable or blocked.'); }
+        await onProgress({ stage: 'navigation', completedPages: results.length, totalPages: pageList.length, currentUrl: targetUrl });
         context = await browser.newContext({
+          serviceWorkers: 'block', acceptDownloads: false,
           viewport: { width: 1280, height: 800 },
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         });
 
+        const guard = await protectBrowserContext(context, { signal, validateUrl });
         const page = await context.newPage();
-
-        // Speed up audit by blocking heavy media and slow tracker networks
-        await page.route('**/*', (route) => {
-          const request = route.request();
-          const type = request.resourceType();
-          const reqUrl = request.url().toLowerCase();
-          if (
-            type === 'media' ||
-            reqUrl.includes('google-analytics') ||
-            reqUrl.includes('googletagmanager') ||
-            reqUrl.includes('doubleclick') ||
-            reqUrl.includes('facebook.net') ||
-            reqUrl.includes('hotjar') ||
-            reqUrl.includes('clarity.ms') ||
-            reqUrl.includes('adservice')
-          ) {
-            return route.abort();
-          }
-          return route.continue();
-        });
-
-        await page.goto(targetUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 20000,
-        });
+        await guard.guardPage(page);
+        const response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: env.navigationTimeoutMs });
+        if (response && response.status() >= 400) {
+          throw new RunError(`The target returned HTTP ${response.status()}.`, { retryable: response.status() === 429 || response.status() >= 500 });
+        }
+        signal?.throwIfAborted();
+        await onProgress({ stage: 'accessibility-analysis', completedPages: results.length, totalPages: pageList.length, currentUrl: targetUrl });
 
         // Run axe analysis
         const axeResults = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
           .analyze();
+
+        signal?.throwIfAborted();
+        await onProgress({ stage: 'preview-capture', completedPages: results.length, totalPages: pageList.length, currentUrl: targetUrl });
 
         // Collect bounding boxes for unique violation target selectors (deduped for speed)
         const allSelectors = [];
@@ -206,17 +192,23 @@ export async function scanPages(pages) {
 
         results.push(pageResult);
       } catch (err) {
+        signal?.throwIfAborted();
         results.push({
           url: targetUrl,
           status: 'error',
-          error: err.message,
+          error: publicError(err),
+          retryable: isTransient(err),
         });
       } finally {
-        if (context) await context.close();
+        if (context) await context.close().catch(() => {});
       }
+      signal?.throwIfAborted();
+      await onProgress({ stage: 'page-completed', completedPages: results.length, totalPages: pageList.length, failedPages: results.filter((page) => page.status === 'error').length, currentUrl: targetUrl });
     }
   } finally {
-    await browser.close();
+    signal?.removeEventListener('abort', abort);
+    await browser.close().catch(() => {});
+    await proxy.close();
   }
 
   // Aggregate violations
