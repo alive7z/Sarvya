@@ -1,9 +1,19 @@
 import { Router } from 'express';
+import { limitAsync } from '../middleware/security.js';
 import { chromium } from 'playwright';
+import { createPublicProxy, browserEnvironment } from '../services/publicNetwork.js';
+import { safeFetch } from '../services/crawlerService.js';
+import { protectBrowserContext } from '../services/browserNetworkGuard.js';
+const escapeHtml = value => String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 import { normalizeUrl, assertPublicUrl } from '../services/urlValidator.js';
 import { getScan, listScans } from '../services/storageService.js';
 
 const router = Router();
+// Remote HTML must never share the origin of authenticated GitHub actions.
+router.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', "sandbox allow-scripts allow-forms allow-popups; frame-ancestors 'self'");
+  next();
+});
 
 const REAL_BROWSER_HEADERS = {
   'User-Agent':
@@ -23,33 +33,8 @@ const REAL_BROWSER_HEADERS = {
 
 // Fetch page HTML using standard fetch with real Chrome desktop headers
 async function fetchPreviewHtml(targetUrl) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
-
-  try {
-    const response = await fetch(targetUrl, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: REAL_BROWSER_HEADERS,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (
-      !contentType.toLowerCase().includes('text/html') &&
-      !contentType.toLowerCase().includes('application/xhtml')
-    ) {
-      throw new Error(`URL did not return HTML (received ${contentType}).`);
-    }
-
-    const html = await response.text();
-    return { html, finalUrl: response.url };
-  } finally {
-    clearTimeout(timeout);
-  }
+  const result = await safeFetch(targetUrl, new URL(targetUrl).origin);
+  return { html: result.html, finalUrl: result.url };
 }
 
 // Sanitize HTML to prevent slow third-party ad/tracker scripts from stalling the preview iframe
@@ -66,12 +51,11 @@ function sanitizeHtmlForPreview(html) {
 // Fallback: Launch Chromium via Playwright to retrieve rendered HTML when fetch gets blocked (e.g. 403 Cloudflare)
 async function fetchWithBrowser(targetUrl) {
   let browser;
+  const proxy = await createPublicProxy();
   try {
     browser = await chromium.launch({
-      headless: true,
+      headless: true, env: browserEnvironment(), chromiumSandbox: true, timeout: 15000, proxy: { server: proxy.server, bypass: '<-loopback>' },
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
@@ -81,24 +65,21 @@ async function fetchWithBrowser(targetUrl) {
       ],
     });
     const context = await browser.newContext({
+      serviceWorkers: 'block', acceptDownloads: false,
       viewport: { width: 1280, height: 800 },
       userAgent: REAL_BROWSER_HEADERS['User-Agent'],
     });
+    const guard = await protectBrowserContext(context, { validateUrl: assertPublicUrl });
     const page = await context.newPage();
-
-    // Speed up navigation by ignoring media & trackers
-    await page.route('**/*', (route) => {
-      const type = route.request().resourceType();
-      if (type === 'media') return route.abort();
-      return route.continue();
-    });
+    await guard.guardPage(page);
 
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
     const html = await page.content();
+    if (Buffer.byteLength(html) > 2.5 * 1024 * 1024) throw new Error('Preview exceeds the size limit.');
     const finalUrl = page.url();
     return { html, finalUrl };
   } finally {
-    if (browser) await browser.close();
+    try { if (browser) await browser.close(); } finally { await proxy.close(); }
   }
 }
 
@@ -146,8 +127,8 @@ function buildOverlayScript(issues) {
     .replace(/&/g, '\\u0026');
 
   return `
-<style id="accesslens-overlay-styles">
-  .accesslens-marker {
+<style id="sarvya-overlay-styles">
+  .sarvya-marker {
     position: absolute;
     z-index: 2147483640;
     width: 26px;
@@ -164,38 +145,38 @@ function buildOverlayScript(issues) {
     font-weight: 800;
     color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    animation: accesslens-pulse 2s ease-in-out infinite;
+    animation: sarvya-pulse 2s ease-in-out infinite;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     pointer-events: auto;
   }
-  .accesslens-marker:hover {
+  .sarvya-marker:hover {
     transform: scale(1.25);
     box-shadow: 0 4px 16px rgba(239,68,68,0.7);
     animation: none;
   }
-  .accesslens-marker.serious { background: #f97316; box-shadow: 0 2px 8px rgba(249,115,22,0.5); }
-  .accesslens-marker.moderate { background: #eab308; box-shadow: 0 2px 8px rgba(234,179,8,0.5); color: #1a1a1a; }
-  .accesslens-marker.minor { background: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.5); }
+  .sarvya-marker.serious { background: #f97316; box-shadow: 0 2px 8px rgba(249,115,22,0.5); }
+  .sarvya-marker.moderate { background: #eab308; box-shadow: 0 2px 8px rgba(234,179,8,0.5); color: #1a1a1a; }
+  .sarvya-marker.minor { background: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.5); }
 
-  @keyframes accesslens-pulse {
+  @keyframes sarvya-pulse {
     0%, 100% { box-shadow: 0 2px 8px rgba(239,68,68,0.5), 0 0 0 0 rgba(239,68,68,0.4); }
     50% { box-shadow: 0 2px 8px rgba(239,68,68,0.5), 0 0 0 8px rgba(239,68,68,0); }
   }
 
-  @keyframes accesslens-inspect-pulse {
+  @keyframes sarvya-inspect-pulse {
     0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.9); }
     50% { box-shadow: 0 0 0 16px rgba(249, 115, 22, 0); }
     100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
   }
 
-  .accesslens-inspect-active {
+  .sarvya-inspect-active {
     outline: 4px solid #f97316 !important;
     outline-offset: 4px !important;
     border-radius: 6px !important;
-    animation: accesslens-inspect-pulse 1.2s ease-in-out infinite !important;
+    animation: sarvya-inspect-pulse 1.2s ease-in-out infinite !important;
   }
 
-  .accesslens-tooltip {
+  .sarvya-tooltip {
     position: absolute;
     z-index: 2147483645;
     background: #18181b;
@@ -212,8 +193,8 @@ function buildOverlayScript(issues) {
     pointer-events: auto;
     display: none;
   }
-  .accesslens-tooltip.visible { display: block; }
-  .accesslens-tooltip .al-title {
+  .sarvya-tooltip.visible { display: block; }
+  .sarvya-tooltip .al-title {
     font-weight: 700;
     font-size: 13px;
     margin-bottom: 6px;
@@ -221,7 +202,7 @@ function buildOverlayScript(issues) {
     align-items: center;
     gap: 8px;
   }
-  .accesslens-tooltip .al-badge {
+  .sarvya-tooltip .al-badge {
     display: inline-block;
     padding: 2px 7px;
     border-radius: 6px;
@@ -230,12 +211,12 @@ function buildOverlayScript(issues) {
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  .accesslens-tooltip .al-badge.critical { background: #ef4444; color: #fff; }
-  .accesslens-tooltip .al-badge.serious { background: #f97316; color: #fff; }
-  .accesslens-tooltip .al-badge.moderate { background: #eab308; color: #1a1a1a; }
-  .accesslens-tooltip .al-badge.minor { background: #3b82f6; color: #fff; }
-  .accesslens-tooltip .al-section { margin-top: 10px; }
-  .accesslens-tooltip .al-label {
+  .sarvya-tooltip .al-badge.critical { background: #ef4444; color: #fff; }
+  .sarvya-tooltip .al-badge.serious { background: #f97316; color: #fff; }
+  .sarvya-tooltip .al-badge.moderate { background: #eab308; color: #1a1a1a; }
+  .sarvya-tooltip .al-badge.minor { background: #3b82f6; color: #fff; }
+  .sarvya-tooltip .al-section { margin-top: 10px; }
+  .sarvya-tooltip .al-label {
     font-size: 10px;
     color: #a1a1aa;
     text-transform: uppercase;
@@ -243,7 +224,7 @@ function buildOverlayScript(issues) {
     font-weight: 600;
     margin-bottom: 4px;
   }
-  .accesslens-tooltip pre {
+  .sarvya-tooltip pre {
     background: #27272a;
     border-radius: 8px;
     padding: 8px 10px;
@@ -257,7 +238,7 @@ function buildOverlayScript(issues) {
     max-height: 140px;
     overflow-y: auto;
   }
-  .accesslens-tooltip .al-close {
+  .sarvya-tooltip .al-close {
     position: absolute;
     top: 10px;
     right: 12px;
@@ -269,18 +250,18 @@ function buildOverlayScript(issues) {
     line-height: 1;
     padding: 2px;
   }
-  .accesslens-tooltip .al-close:hover { color: #fafafa; }
+  .sarvya-tooltip .al-close:hover { color: #fafafa; }
 
-  .accesslens-highlight {
+  .sarvya-highlight {
     outline: 3px solid #ef4444 !important;
     outline-offset: 3px !important;
     box-shadow: 0 0 0 6px rgba(239,68,68,0.15) !important;
   }
-  .accesslens-highlight.serious { outline-color: #f97316 !important; box-shadow: 0 0 0 6px rgba(249,115,22,0.15) !important; }
-  .accesslens-highlight.moderate { outline-color: #eab308 !important; box-shadow: 0 0 0 6px rgba(234,179,8,0.15) !important; }
-  .accesslens-highlight.minor { outline-color: #3b82f6 !important; box-shadow: 0 0 0 6px rgba(59,130,246,0.15) !important; }
+  .sarvya-highlight.serious { outline-color: #f97316 !important; box-shadow: 0 0 0 6px rgba(249,115,22,0.15) !important; }
+  .sarvya-highlight.moderate { outline-color: #eab308 !important; box-shadow: 0 0 0 6px rgba(234,179,8,0.15) !important; }
+  .sarvya-highlight.minor { outline-color: #3b82f6 !important; box-shadow: 0 0 0 6px rgba(59,130,246,0.15) !important; }
 </style>
-<script id="accesslens-overlay-script">
+<script id="sarvya-overlay-script">
 (function() {
   'use strict';
   var items = ${safeJson};
@@ -289,7 +270,7 @@ function buildOverlayScript(issues) {
 
   function createTooltip() {
     var el = document.createElement('div');
-    el.className = 'accesslens-tooltip';
+    el.className = 'sarvya-tooltip';
     el.addEventListener('click', function(e) { e.stopPropagation(); });
     document.body.appendChild(el);
     return el;
@@ -358,9 +339,9 @@ function buildOverlayScript(issues) {
 
   function placeMarkers() {
     // Remove old markers
-    document.querySelectorAll('.accesslens-marker').forEach(function(m) { m.remove(); });
-    document.querySelectorAll('.accesslens-highlight').forEach(function(m) {
-      m.classList.remove('accesslens-highlight', 'critical', 'serious', 'moderate', 'minor');
+    document.querySelectorAll('.sarvya-marker').forEach(function(m) { m.remove(); });
+    document.querySelectorAll('.sarvya-highlight').forEach(function(m) {
+      m.classList.remove('sarvya-highlight', 'critical', 'serious', 'moderate', 'minor');
     });
 
     var markerIndex = 0;
@@ -376,11 +357,11 @@ function buildOverlayScript(issues) {
         var severity = item.severity || 'moderate';
 
         // Add outline highlight to the element
-        el.classList.add('accesslens-highlight', severity);
+        el.classList.add('sarvya-highlight', severity);
 
         // Create marker badge
         var marker = document.createElement('div');
-        marker.className = 'accesslens-marker ' + severity;
+        marker.className = 'sarvya-marker ' + severity;
         marker.textContent = markerIndex;
         marker.title = (item.title || item.rule) + ' (' + severity + ') - Node #' + (item.nodeIndex || markerIndex);
         marker.dataset.selector = selector;
@@ -407,7 +388,7 @@ function buildOverlayScript(issues) {
 
   // Handle INSPECT message from parent window (Inspect button click or Node pill click)
   window.addEventListener('message', function(event) {
-    if (!event.data || event.data.type !== 'ACCESSLENS_INSPECT') return;
+    if (!event.data || event.data.type !== 'SARVYA_INSPECT') return;
     var selector = event.data.selector;
     if (!selector) return;
 
@@ -415,16 +396,16 @@ function buildOverlayScript(issues) {
       var el = document.querySelector(selector);
       if (el) {
         // Remove previous inspect pulses
-        document.querySelectorAll('.accesslens-inspect-active').forEach(function(node) {
-          node.classList.remove('accesslens-inspect-active');
+        document.querySelectorAll('.sarvya-inspect-active').forEach(function(node) {
+          node.classList.remove('sarvya-inspect-active');
         });
 
         // Add pulsing inspection class
-        el.classList.add('accesslens-inspect-active');
+        el.classList.add('sarvya-inspect-active');
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Find corresponding marker & item to show fix tooltip
-        var marker = Array.from(document.querySelectorAll('.accesslens-marker')).find(function(m) {
+        var marker = Array.from(document.querySelectorAll('.sarvya-marker')).find(function(m) {
           return m.dataset.selector === selector;
         });
         var matchedItem = items.find(function(i) { return i.selector === selector; }) || items[0];
@@ -435,14 +416,14 @@ function buildOverlayScript(issues) {
         }
 
         setTimeout(function() {
-          el.classList.remove('accesslens-inspect-active');
+          el.classList.remove('sarvya-inspect-active');
         }, 4000);
       }
     } catch(e) {}
   });
 
         setTimeout(function() {
-          el.classList.remove('accesslens-inspect-active');
+          el.classList.remove('sarvya-inspect-active');
         }, 4000);
       }
     } catch(err) {
@@ -515,7 +496,7 @@ function buildScreenshotHtml(targetUrl, screenshot, issues) {
       <span class="badge">AUDIT SNAPSHOT</span>
       <span>Live Chromium capture with detected accessibility markers</span>
     </div>
-    <a href="${targetUrl}" target="_blank" rel="noopener">Open target website ↗</a>
+    <a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener">Open target website ↗</a>
   </div>
   <div class="container">
     <img class="screenshot" src="${screenshot}" alt="Audit screenshot for ${targetUrl}" />
@@ -525,7 +506,7 @@ function buildScreenshotHtml(targetUrl, screenshot, issues) {
 </html>`;
 }
 
-router.get('/', async (req, res) => {
+router.get('/', limitAsync(2, async (req, res) => {
   const { url, scanId } = req.query;
 
   let targetUrl = url;
@@ -592,7 +573,7 @@ router.get('/', async (req, res) => {
     // Inject base tag so relative links, images, and fonts resolve correctly
     let modifiedHtml = sanitizeHtmlForPreview(htmlContent);
     const baseUrl = finalUrl || normalized;
-    const baseTag = `<base href="${baseUrl}">`;
+    const baseTag = `<base href="${escapeHtml(baseUrl)}">`;
 
     if (/<head[^>]*>/i.test(modifiedHtml)) {
       modifiedHtml = modifiedHtml.replace(
@@ -619,7 +600,7 @@ router.get('/', async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.removeHeader('Content-Security-Policy');
+    // Keep the sandbox policy, including when serving captured target HTML.
     res.send(modifiedHtml);
   } catch (err) {
     // If an earlier scan exists in history for this URL that has a screenshot, use it!
@@ -646,13 +627,13 @@ router.get('/', async (req, res) => {
 <div class="box">
   <div style="font-size:36px;margin-bottom:12px;">🔍</div>
   <h3 style="margin:0 0 8px;font-size:18px;">Preview unavailable</h3>
-  <p style="color:#666;font-size:13px;line-height:1.7;">${err.message}</p>
-  <p style="margin-top:16px;"><a href="${targetUrl}" target="_blank" rel="noopener" style="color:#f97316;font-weight:600;font-size:13px;">Open website in new tab →</a></p>
+  <p style="color:#666;font-size:13px;line-height:1.7;">Preview could not be loaded. Scan a public website and try again.</p>
+  <p style="margin-top:16px;"><a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener" style="color:#f97316;font-weight:600;font-size:13px;">Open website in new tab →</a></p>
 </div>
 </body>
 </html>`);
   }
-});
+}));
 
 // Endpoint to get scan issues as JSON (for frontend overlay approach)
 router.get('/scan-data/:scanId', (req, res) => {
