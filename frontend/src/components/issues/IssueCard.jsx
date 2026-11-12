@@ -1,4 +1,4 @@
-import { ChevronRight, Layers3 } from 'lucide-react';
+import { ChevronRight, Layers3, OctagonAlert, TriangleAlert, CircleAlert, Info } from 'lucide-react';
 import CodeFixPanel from './CodeFixPanel.jsx';
 
 export default function IssueCard({
@@ -44,6 +44,8 @@ export default function IssueCard({
       'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
   };
 
+  const SeverityIcon = { critical: OctagonAlert, serious: TriangleAlert, moderate: CircleAlert, minor: Info }[issue.severity] || Info;
+
   return (
     <article
       className={`group relative overflow-hidden rounded-2xl border bg-white transition-[background-color,border-color,box-shadow] duration-200 ease-out dark:bg-zinc-900 ${
@@ -59,11 +61,12 @@ export default function IssueCard({
       <button
         type="button"
         onClick={onSelect}
+        aria-pressed={selected}
         aria-expanded={expanded}
         aria-controls={`issue-details-${issue.id}`}
         className={`flex w-full items-start gap-3 p-4 text-left ${selected ? 'bg-accent-50/30 dark:bg-accent-500/5' : 'hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40'}`}
       >
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${severity.dot}`} />
+        <SeverityIcon aria-hidden="true" size={17} className="mt-0.5 shrink-0 text-zinc-600 dark:text-zinc-300" />
         <span className="min-w-0 flex-1">
           <span className="block text-[13px] font-semibold leading-5 text-zinc-900 dark:text-zinc-100">
             {issue.title}
