@@ -607,10 +607,6 @@ The following are **not claimed as completed features**:
 - [ ] Publish the CLI to npm and the extension to supported browser stores.
 - [ ] Complete and validate a hosted production deployment.
 
-## Contributing
-
-Before contributing, read [AGENTS.md](AGENTS.md), inspect the relevant implementation, and keep sample data distinct from real results. Preserve error/loading states, keyboard usability, responsive behavior, and privacy-sensitive defaults. Run applicable tests and review the diff before submitting changes.
-
 ## License
 
 **UNLICENSED.** This project currently has no open-source license. Public visibility of the repository does not grant permission to redistribute or reuse its source. Third-party dependencies retain their respective licenses.
